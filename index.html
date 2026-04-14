@@ -20,10 +20,10 @@
         // Initialize map centered on Bangladesh
         var map = L.map('map').setView([23.6850, 90.3563], 7);
 
-        // Create a custom pane for flood events to ensure they stay on top
-        map.createPane('floodPane');
-        map.getPane('floodPane').style.zIndex = 650; // Higher than standard overlay pane
-        map.getPane('floodPane').style.pointerEvents = 'none'; // Allow clicks to pass through if needed, but we want them clickable
+        // Create a custom pane for flood events to ensure they stay on top AND are clickable
+        var floodPane = map.createPane('floodPane');
+        floodPane.style.zIndex = 650; // Higher than district layers (default overlayPane is 400)
+        // CRITICAL: We do NOT set pointerEvents = 'none' here so the markers can be clicked
 
         // Dark base map with English labels
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -39,7 +39,8 @@
                 weight: 1.5,
                 opacity: 1,
                 color: '#fff',
-                fillOpacity: 0.6
+                fillOpacity: 0.6,
+                interactive: true // Districts are also clickable for their own info
             };
         }
 
@@ -50,18 +51,19 @@
                 weight: 3,
                 opacity: 1,
                 color: '#fff',
-                fillOpacity: 0.85
+                fillOpacity: 0.85,
+                interactive: true
             };
         }
 
-        // 1. Load Background Districts
+        // 1. Load Background Districts (lowest layer)
         fetch('other_districts.geojson')
             .then(res => res.json())
             .then(data => {
                 L.geoJSON(data, { style: styleOtherDistricts }).addTo(map);
             });
 
-        // 2. Load Priority Districts
+        // 2. Load Priority Districts (middle layer)
         fetch('priority_districts.geojson')
             .then(res => res.json())
             .then(data => {
@@ -73,7 +75,7 @@
                 }).addTo(map);
             });
 
-        // 3. Load Flood Events (Using custom pane to keep them in front)
+        // 3. Load Flood Events (TOP LAYER - using custom pane)
         fetch('bangladesh_floods.geojson')
             .then(res => res.json())
             .then(data => {
@@ -81,23 +83,24 @@
                     pane: 'floodPane',
                     pointToLayer: function (feature, latlng) {
                         return L.circleMarker(latlng, {
-                            radius: 10,
+                            radius: 12, // Increased size for even easier clicking
                             fillColor: "#ff0000",
                             color: "#fff",
                             weight: 2,
                             opacity: 1,
                             fillOpacity: 1,
-                            interactive: true // Ensure they are clickable
+                            interactive: true 
                         });
                     },
                     onEachFeature: function(feature, layer) {
                         var props = feature.properties;
-                        var popupContent = "<div style='font-family: Arial;'>" +
-                                         "<h3 style='margin:0 0 10px 0;'>Flood Event</h3>" +
+                        var popupContent = "<div style='font-family: Arial; min-width: 200px;'>" +
+                                         "<h3 style='margin:0 0 10px 0; color: #d73027;'>Flood Event</h3>" +
                                          "<b>Location:</b> Bangladesh<br>" +
                                          "<b>Main Cause:</b> " + props.MainCause + "<br>" +
                                          "<b>Severity:</b> " + props.Severity + "<br>" +
                                          "<b>Dates:</b> " + props.Began + " to " + props.Ended + "<br>" +
+                                         "<b>Fatalities:</b> " + (props.Dead || "0") + "<br>" +
                                          "<b>Displaced:</b> " + (props.Displaced || "N/A") +
                                          "</div>";
                         layer.bindPopup(popupContent);
@@ -109,7 +112,7 @@
         var legend = L.control({position: 'bottomright'});
         legend.onAdd = function (map) {
             var div = L.DomUtil.create('div', 'info legend'),
-                grades = ["Priority Districts", "Bangladesh Territory", "Flood Event Point (Clickable)"],
+                grades = ["Priority Districts", "Bangladesh Territory", "Flood Event (Click for details)"],
                 colors = ["#ff7800", "#006d2c", "#ff0000"];
 
             for (var i = 0; i < grades.length; i++) {
