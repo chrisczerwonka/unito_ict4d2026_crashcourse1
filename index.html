@@ -9,114 +9,137 @@
         body { margin: 0; padding: 0; }
         #map { height: 100vh; width: 100%; background: #f0f0f0; }
         .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.9); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; }
-        .legend { line-height: 24px; color: #333; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
-        .legend i { width: 20px; height: 20px; float: left; margin-right: 10px; opacity: 0.8; border: 1px solid #999; }
+        .legend { line-height: 18px; color: #333; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
+        .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.8; border: 1px solid #999; }
+        .leaflet-tooltip { background: transparent; border: none; box-shadow: none; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 2px white, -1px -1px 2px white; }
+        .capital-label { color: #d73027; font-size: 16px; font-weight: 900 !important; }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script>
-        // Initialize map centered on Bangladesh
         var map = L.map('map').setView([23.6850, 90.3563], 7);
 
-        // Create a custom pane for flood events to ensure they stay on top AND are clickable
-        var floodPane = map.createPane('floodPane');
-        floodPane.style.zIndex = 650; // Higher than district layers (default overlayPane is 400)
-
-        // LIGHT base map with English labels (OpenStreetMap Standard)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19
+        // --- BASE LAYERS ---
+        var normal = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CARTO'
         }).addTo(map);
 
-        // Styling for the overall Bangladesh boundary (Lightly shaded, no internal borders)
-        function styleBoundary(feature) {
-            return {
-                fillColor: '#a1d99b', // Very Light Green
-                weight: 2,
-                opacity: 1,
-                color: '#31a354', // Green border for the country outline
-                fillOpacity: 0.2
-            };
-        }
+        var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Esri World Imagery'
+        });
 
-        // Styling for priority districts (Highlighted boldly)
-        function stylePriorityDistricts(feature) {
-            return {
-                fillColor: '#ff7800', // Bold Orange
-                weight: 2,
-                opacity: 1,
-                color: '#fff',
-                fillOpacity: 0.7,
-                interactive: true
-            };
-        }
+        var terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            attribution: 'OpenTopoMap'
+        });
 
-        // 1. Load Overall Bangladesh Boundary (ADM0)
+        // --- OVERLAY PANES ---
+        map.createPane('maskPane');
+        map.getPane('maskPane').style.zIndex = 300;
+        map.createPane('priorityPane');
+        map.getPane('priorityPane').style.zIndex = 400;
+        map.createPane('floodPane');
+        map.getPane('floodPane').style.zIndex = 650;
+
+        // --- LAYER GROUPS ---
+        var priorityLayer = L.layerGroup().addTo(map);
+        var sev1Group = L.layerGroup().addTo(map);
+        var sev15Group = L.layerGroup().addTo(map);
+        var sev2Group = L.layerGroup().addTo(map);
+
+        // --- WORLD MASK (Shade everything outside Bangladesh) ---
+        fetch('world_mask.geojson')
+            .then(res => res.json())
+            .then(data => {
+                L.geoJSON(data, {
+                    pane: 'maskPane',
+                    style: { fillColor: '#808080', color: 'none', fillOpacity: 0.25, interactive: false }
+                }).addTo(map);
+            });
+
+        // --- BANGLADESH BOUNDARY (Internal shade) ---
         fetch('bd_boundary.geojson')
             .then(res => res.json())
             .then(data => {
-                L.geoJSON(data, { style: styleBoundary, interactive: false }).addTo(map);
+                L.geoJSON(data, {
+                    style: { fillColor: '#a1d99b', color: '#31a354', weight: 1, fillOpacity: 0.1, interactive: false }
+                }).addTo(map);
             });
 
-        // 2. Load Priority Districts (Highlighted)
+        // --- DHAKA CAPITAL MARKER ---
+        var dhakaIcon = L.divIcon({ className: 'leaflet-tooltip capital-label', html: '★ DHAKA' });
+        L.marker([23.8103, 90.4125], { icon: dhakaIcon, interactive: false }).addTo(map);
+
+        // --- PRIORITY DISTRICTS ---
         fetch('priority_districts.geojson')
             .then(res => res.json())
             .then(data => {
                 L.geoJSON(data, {
-                    style: stylePriorityDistricts,
+                    pane: 'priorityPane',
+                    style: { fillColor: '#ff7800', weight: 2, color: '#fff', fillOpacity: 0.6 },
                     onEachFeature: function(feature, layer) {
-                        layer.bindPopup("<b>Priority District:</b> " + (feature.properties.ADM2_EN || "District"));
+                        var name = feature.properties.ADM2_EN;
+                        // Add permanent bold labels
+                        var center = layer.getBounds().getCenter();
+                        L.marker(center, {
+                            icon: L.divIcon({ className: 'leaflet-tooltip', html: '<b>' + name + '</b>' }),
+                            interactive: false
+                        }).addTo(priorityLayer);
+                        layer.bindPopup("<b>Priority District:</b> " + name);
                     }
-                }).addTo(map);
+                }).addTo(priorityLayer);
             });
 
-        // 3. Load Flood Events (TOP LAYER - in custom pane for interactivity)
+        // --- FLOOD EVENTS (FILTERED & CATEGORIZED) ---
         fetch('bangladesh_floods.geojson')
             .then(res => res.json())
             .then(data => {
                 L.geoJSON(data, {
                     pane: 'floodPane',
                     pointToLayer: function (feature, latlng) {
-                        return L.circleMarker(latlng, {
-                            radius: 10,
-                            fillColor: "#ff0000",
-                            color: "#fff",
-                            weight: 2,
-                            opacity: 1,
-                            fillOpacity: 1,
-                            interactive: true 
+                        var sev = feature.properties.Severity;
+                        var color = sev >= 2 ? "#d73027" : (sev >= 1.5 ? "#fc8d59" : "#fee08b");
+                        var radius = sev >= 2 ? 10 : (sev >= 1.5 ? 8 : 6);
+                        
+                        var marker = L.circleMarker(latlng, {
+                            radius: radius, fillColor: color, color: "#fff", weight: 1.5, fillOpacity: 1
                         });
+
+                        // Categorize into groups
+                        if (sev >= 2) marker.addTo(sev2Group);
+                        else if (sev >= 1.5) marker.addTo(sev15Group);
+                        else marker.addTo(sev1Group);
+
+                        return marker;
                     },
                     onEachFeature: function(feature, layer) {
-                        var props = feature.properties;
-                        var popupContent = "<div style='font-family: Arial; min-width: 200px;'>" +
-                                         "<h3 style='margin:0 0 10px 0; color: #d73027;'>Flood Event</h3>" +
-                                         "<b>Location:</b> Bangladesh<br>" +
-                                         "<b>Main Cause:</b> " + props.MainCause + "<br>" +
-                                         "<b>Severity:</b> " + props.Severity + "<br>" +
-                                         "<b>Dates:</b> " + props.Began + " to " + props.Ended + "<br>" +
-                                         "<b>Fatalities:</b> " + (props.Dead || "0") + "<br>" +
-                                         "<b>Displaced:</b> " + (props.Displaced || "N/A") +
-                                         "</div>";
-                        layer.bindPopup(popupContent);
+                        var p = feature.properties;
+                        layer.bindPopup("<b>Flood Event</b><br>Cause: "+p.MainCause+"<br>Severity: "+p.Severity+"<br>Began: "+p.Began);
                     }
-                }).addTo(map);
+                });
             });
 
-        // Legend
+        // --- LAYER CONTROL ---
+        var baseMaps = { "Normal View": normal, "Satellite View": satellite, "Terrain View": terrain };
+        var overlays = {
+            "<b>Priority Districts</b>": priorityLayer,
+            "Flood: High Severity (2+)": sev2Group,
+            "Flood: Moderate (1.5)": sev15Group,
+            "Flood: Low (1)": sev1Group
+        };
+        L.control.layers(baseMaps, overlays, { collapsed: false }).addTo(map);
+
+        // --- LEGEND ---
         var legend = L.control({position: 'bottomright'});
         legend.onAdd = function (map) {
-            var div = L.DomUtil.create('div', 'info legend'),
-                grades = ["Priority Districts", "Bangladesh Territory", "Flood Event (Clickable)"],
-                colors = ["#ff7800", "#a1d99b", "#ff0000"];
-
-            for (var i = 0; i < grades.length; i++) {
-                div.innerHTML +=
-                    '<i style="background:' + colors[i] + '"></i> ' +
-                    grades[i] + '<br>';
-            }
+            var div = L.DomUtil.create('div', 'info legend');
+            div.innerHTML += '<b>Severity Legend</b><br>';
+            div.innerHTML += '<i style="background:#d73027"></i> High (2.0)<br>';
+            div.innerHTML += '<i style="background:#fc8d59"></i> Moderate (1.5)<br>';
+            div.innerHTML += '<i style="background:#fee08b"></i> Low (1.0)<br>';
+            div.innerHTML += '<hr><i style="background:#ff7800"></i> Priority District<br>';
+            div.innerHTML += '<span style="color:#d73027">★</span> Capital (Dhaka)';
             return div;
         };
         legend.addTo(map);
