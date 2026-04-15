@@ -13,7 +13,7 @@
         .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.8; border: 1px solid #999; }
         .leaflet-tooltip { background: transparent; border: none; box-shadow: none; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 2px white, -1px -1px 2px white; }
         .capital-label { color: #d73027; font-size: 16px; font-weight: 900 !important; }
-        .country-label { color: #31a354; font-size: 24px; font-weight: 900 !important; text-transform: uppercase; letter-spacing: 2px; }
+        .map-title { padding: 10px 15px; font: bold 18px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.9); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; text-align: center; max-width: 500px; }
     </style>
 </head>
 <body>
@@ -43,13 +43,43 @@
         map.createPane('floodPane');
         map.getPane('floodPane').style.zIndex = 650;
 
+        // --- TITLE OVERLAY ---
+        var title = L.control({position: 'topright'});
+        title.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'map-title');
+            div.innerHTML = 'Bangladesh flood incidence and risk across the districts of Chattogram, Feni, Cumilla, Munshiganj, Tangail, and Narshingdi';
+            return div;
+        };
+        title.addTo(map);
+
         // --- LAYER GROUPS ---
-        var sev1Group = L.layerGroup().addTo(map);
-        var sev15Group = L.layerGroup().addTo(map);
-        var sev2Group = L.layerGroup().addTo(map);
         var boundaryLayer = L.layerGroup().addTo(map);
         
-        // --- WORLD MASK (Shade everything outside Bangladesh) ---
+        // Priority districts mapping
+        var priorityMapping = {
+            "Chittagong": "Chattogram",
+            "Feni": "Feni",
+            "Comilla": "Cumilla",
+            "Munshiganj": "Munshiganj",
+            "Tangail": "Tangail",
+            "Narsingdi": "Narshingdi"
+        };
+        var reverseMapping = {
+            "Chattogram": "Chittagong",
+            "Feni": "Feni",
+            "Cumilla": "Comilla",
+            "Munshiganj": "Munshiganj",
+            "Tangail": "Tangail",
+            "Narshingdi": "Narsingdi"
+        };
+
+        var districtGroups = {};
+        Object.keys(reverseMapping).forEach(function(d) {
+            districtGroups[d] = L.layerGroup().addTo(map);
+        });
+        var otherDistrictsGroup = L.layerGroup().addTo(map);
+
+        // --- WORLD MASK ---
         fetch('../world_mask.geojson')
             .then(res => res.json())
             .then(data => {
@@ -59,7 +89,7 @@
                 }).addTo(map);
             });
 
-        // --- BANGLADESH BOUNDARY (Internal shade) ---
+        // --- BANGLADESH BOUNDARY ---
         fetch('../bd_boundary.geojson')
             .then(res => res.json())
             .then(data => {
@@ -72,49 +102,46 @@
         var dhakaIcon = L.divIcon({ className: 'leaflet-tooltip capital-label', html: '★ DHAKA' });
         L.marker([23.8103, 90.4125], { icon: dhakaIcon, interactive: false }).addTo(map);
 
-        // --- LAYER CONTROL SETUP ---
+        // --- LAYER CONTROL ---
         var baseMaps = { "Normal View": normal, "Satellite View": satellite, "Terrain View": terrain };
         var overlays = {
-            "<b>Country Boundary</b>": boundaryLayer,
-            "Flood: High Severity (2+)": sev2Group,
-            "Flood: Moderate (1.5)": sev15Group,
-            "Flood: Low (1)": sev1Group
+            "<b>Country Boundary</b>": boundaryLayer
         };
         
-        var layerControl = L.control.layers(baseMaps, overlays, { collapsed: false }).addTo(map);
+        var layerControl = L.control.layers(baseMaps, overlays, { collapsed: false, position: 'topleft' }).addTo(map);
 
-        // --- PRIORITY DISTRICTS (Individual Layers) ---
+        // Add district groups to control
+        Object.keys(districtGroups).forEach(function(d) {
+            layerControl.addOverlay(districtGroups[d], "District: " + d);
+        });
+        layerControl.addOverlay(otherDistrictsGroup, "All other districts");
+
+        // --- PRIORITY DISTRICT POLYGONS ---
         fetch('../priority_districts.geojson')
             .then(res => res.json())
             .then(data => {
-                data.features.forEach(function(feature) {
-                    var name = feature.properties.ADM2_EN;
-                    var districtGroup = L.layerGroup();
-                    
-                    var polygon = L.geoJSON(feature, {
-                        pane: 'priorityPane',
-                        style: { fillColor: '#ff7800', weight: 2, color: '#fff', fillOpacity: 0.6 }
-                    });
-                    
-                    polygon.bindPopup("<b>Priority District:</b> " + name);
-                    polygon.addTo(districtGroup);
-                    
-                    // Add permanent label
-                    var center = polygon.getBounds().getCenter();
-                    L.marker(center, {
-                        icon: L.divIcon({ className: 'leaflet-tooltip', html: '<b>' + name + '</b>' }),
-                        interactive: false
-                    }).addTo(districtGroup);
-                    
-                    // Add to map initially
-                    districtGroup.addTo(map);
-                    
-                    // Add to layer control
-                    layerControl.addOverlay(districtGroup, "District: " + name);
+                L.geoJSON(data, {
+                    pane: 'priorityPane',
+                    style: { fillColor: '#ff7800', weight: 2, color: '#fff', fillOpacity: 0.4 },
+                    onEachFeature: function(feature, layer) {
+                        var rawName = feature.properties.ADM2_EN;
+                        var displayName = priorityMapping[rawName] || rawName;
+                        var group = districtGroups[displayName] || otherDistrictsGroup;
+                        
+                        // Add label
+                        var center = layer.getBounds().getCenter();
+                        L.marker(center, {
+                            icon: L.divIcon({ className: 'leaflet-tooltip', html: '<b>' + displayName + '</b>' }),
+                            interactive: false
+                        }).addTo(group);
+                        
+                        layer.addTo(group);
+                        layer.bindPopup("<b>Priority District:</b> " + displayName);
+                    }
                 });
             });
 
-        // --- FLOOD EVENTS (FILTERED & CATEGORIZED) ---
+        // --- FLOOD EVENTS (Categorized by District) ---
         fetch('../bangladesh_floods.geojson')
             .then(res => res.json())
             .then(data => {
@@ -129,16 +156,16 @@
                             radius: radius, fillColor: color, color: "#fff", weight: 1.5, fillOpacity: 1
                         });
 
-                        // Categorize into groups
-                        if (sev >= 2) marker.addTo(sev2Group);
-                        else if (sev >= 1.5) marker.addTo(sev15Group);
-                        else marker.addTo(sev1Group);
-
+                        var rawName = feature.properties.ADM2_EN;
+                        var displayName = priorityMapping[rawName];
+                        var group = displayName ? districtGroups[displayName] : otherDistrictsGroup;
+                        
+                        marker.addTo(group);
                         return marker;
                     },
                     onEachFeature: function(feature, layer) {
                         var p = feature.properties;
-                        layer.bindPopup("<b>Flood Event</b><br>Cause: "+p.MainCause+"<br>Severity: "+p.Severity+"<br>Began: "+p.Began);
+                        layer.bindPopup("<b>Flood Event</b><br>District: " + (priorityMapping[p.ADM2_EN] || p.ADM2_EN) + "<br>Cause: "+p.MainCause+"<br>Severity: "+p.Severity+"<br>Began: "+p.Began);
                     }
                 });
             });
@@ -153,14 +180,6 @@
             div.innerHTML += '<i style="background:#fee08b"></i> Low (1.0)<br>';
             div.innerHTML += '<hr><i style="background:#ff7800"></i> Priority District<br>';
             div.innerHTML += '<span style="color:#d73027">★</span> Capital (Dhaka)';
-            return div;
-        };
-        legend.addTo(map);
-
-    </script>
-</body>
-</html>
- (Dhaka)';
             return div;
         };
         legend.addTo(map);
