@@ -123,6 +123,7 @@
                 L.geoJSON(data, {
                     pane: 'priorityPane',
                     style: { fillColor: '#ff7800', weight: 2, color: '#fff', fillOpacity: 0.4 },
+                    interactive: false,
                     onEachFeature: function(feature, layer) {
                         var rawName = feature.properties.ADM2_EN;
                         var displayName = priorityMapping[rawName] || rawName;
@@ -136,7 +137,6 @@
                         }).addTo(group);
                         
                         layer.addTo(group);
-                        layer.bindPopup("<b>Priority District:</b> " + displayName);
                     }
                 });
             });
