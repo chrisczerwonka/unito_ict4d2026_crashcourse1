@@ -40,22 +40,24 @@
         }).addTo(map);
 
         // --- OVERLAY PANES ---
-        // Order: Base -> Mask (ROW) -> Boundary (BD Green) -> Priority (Blue) -> Labels (English) -> Floods
+        // Order: Base -> Map Labels (under gray) -> ROW Mask (Gray) -> BD Green Boundary -> Priority Regions (Blue) -> Manual Bold Labels -> Flood Events
+        map.createPane('tileLabelPane');
+        map.getPane('tileLabelPane').style.zIndex = 250;
         map.createPane('maskPane');
         map.getPane('maskPane').style.zIndex = 300;
         map.createPane('boundaryPane');
         map.getPane('boundaryPane').style.zIndex = 350;
         map.createPane('priorityPane');
         map.getPane('priorityPane').style.zIndex = 400;
-        map.createPane('labelPane');
-        map.getPane('labelPane').style.zIndex = 500;
+        map.createPane('boldLabelPane');
+        map.getPane('boldLabelPane').style.zIndex = 500;
         map.createPane('floodPane');
         map.getPane('floodPane').style.zIndex = 650;
 
-        // English labels on top of masks but under floods
+        // Base Map Labels (Under the gray overlay)
         var labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-            pane: 'labelPane'
+            pane: 'tileLabelPane'
         }).addTo(map);
 
         var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -80,17 +82,17 @@
         var counts = { "All other districts": 0 };
         Object.keys(priorityMapping).forEach(k => { counts[priorityMapping[k]] = 0; });
 
-        // --- WORLD MASK (ROW) ---
+        // --- WORLD MASK (Rest of World overlay - light gray and transparent) ---
         fetch('../world_mask.geojson')
             .then(res => res.json())
             .then(data => {
                 L.geoJSON(data, {
                     pane: 'maskPane',
-                    style: { fillColor: '#555', color: 'none', fillOpacity: 0.2, interactive: false }
+                    style: { fillColor: '#808080', color: 'none', fillOpacity: 0.15, interactive: false }
                 }).addTo(map);
             });
 
-        // --- BANGLADESH BOUNDARY (Light Green Outside Priority) ---
+        // --- BANGLADESH BOUNDARY (Light Green Tone Outside Priority) ---
         fetch('../bd_boundary.geojson')
             .then(res => res.json())
             .then(data => {
@@ -100,9 +102,9 @@
                 }).addTo(map);
             });
 
-        // --- DHAKA CAPITAL MARKER ---
+        // --- DHAKA CAPITAL MARKER (Bold Manual Label) ---
         var dhakaIcon = L.divIcon({ className: 'leaflet-tooltip capital-label', html: '★ DHAKA' });
-        L.marker([23.8103, 90.4125], { icon: dhakaIcon, interactive: false, pane: 'labelPane' }).addTo(map);
+        L.marker([23.8103, 90.4125], { icon: dhakaIcon, interactive: false, pane: 'boldLabelPane' }).addTo(map);
 
         // --- CONSOLIDATED CONTROL ---
         var customControl = L.control({position: 'topleft'});
@@ -122,7 +124,6 @@
                 '<div class="legend-item"><i style="background:#90ee90; opacity: 0.25"></i> Other BD Districts</div>' +
                 '<div class="legend-item"><span style="color:#d73027">★</span> Capital (Dhaka)</div>';
             
-            // Radio logic
             setTimeout(() => {
                 div.querySelector('#base_map').onclick = () => { map.removeLayer(satellite); map.addLayer(base); map.addLayer(labels); };
                 div.querySelector('#base_sat').onclick = () => { map.removeLayer(base); map.removeLayer(labels); map.addLayer(satellite); };
@@ -168,9 +169,10 @@
                     var d = priorityMapping[feature.properties.ADM2_EN];
                     districtBounds[d] = layer.getBounds();
                     var center = layer.getBounds().getCenter();
+                    // Manual Bold Label ON TOP of all masks
                     L.marker(center, {
                         icon: L.divIcon({ className: 'leaflet-tooltip', html: '<b>' + d + '</b>' }),
-                        interactive: false, pane: 'labelPane'
+                        interactive: false, pane: 'boldLabelPane'
                     }).addTo(map);
                 }
             }).addTo(map);
@@ -193,6 +195,20 @@
 
             populateDistricts();
         });
+
+        // --- LEGEND ---
+        var legend = L.control({position: 'bottomright'});
+        legend.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'info legend');
+            div.innerHTML += '<b>Severity Legend</b><br>';
+            div.innerHTML += '<i style="background:#d73027"></i> High (2.0)<br>';
+            div.innerHTML += '<i style="background:#fc8d59"></i> Moderate (1.5)<br>';
+            div.innerHTML += '<i style="background:#fee08b"></i> Low (1.0)<br>';
+            div.innerHTML += '<hr><i style="background:#add8e6"></i> Priority District<br>';
+            div.innerHTML += '<span style="color:#d73027">★</span> Capital (Dhaka)';
+            return div;
+        };
+        legend.addTo(map);
     </script>
 </body>
 </html>
