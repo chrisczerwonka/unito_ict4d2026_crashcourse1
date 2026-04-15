@@ -104,9 +104,7 @@
 
         // --- LAYER CONTROL ---
         var baseMaps = { "Normal View": normal, "Satellite View": satellite, "Terrain View": terrain };
-        var overlays = {
-            "<b>Country Boundary</b>": boundaryLayer
-        };
+        var overlays = {};
         
         var layerControl = L.control.layers(baseMaps, overlays, { collapsed: false, position: 'topleft' }).addTo(map);
 
@@ -116,13 +114,42 @@
         });
         layerControl.addOverlay(otherDistrictsGroup, "All other districts");
 
+        // --- CUSTOM ZOOM BEHAVIOR FOR LAYER CONTROL ---
+        // After adding all overlays, we find the labels and add click events
+        setTimeout(function() {
+            var labels = document.querySelectorAll('.leaflet-control-layers-overlays label span');
+            labels.forEach(function(span) {
+                var text = span.innerText.trim();
+                if (text.startsWith("District: ")) {
+                    var districtName = text.replace("District: ", "");
+                    span.style.cursor = "pointer";
+                    span.style.textDecoration = "underline";
+                    span.title = "Click to zoom to " + districtName;
+                    
+                    span.onclick = function(e) {
+                        // Find the polygon for this district to get bounds
+                        var group = districtGroups[districtName];
+                        var bounds = L.latLngBounds();
+                        group.eachLayer(function(layer) {
+                            if (layer instanceof L.GeoJSON) {
+                                bounds.extend(layer.getBounds());
+                            }
+                        });
+                        if (bounds.isValid()) {
+                            map.fitBounds(bounds, { padding: [50, 50] });
+                        }
+                    };
+                }
+            });
+        }, 1000);
+
         // --- PRIORITY DISTRICT POLYGONS ---
         fetch('../priority_districts.geojson')
             .then(res => res.json())
             .then(data => {
                 L.geoJSON(data, {
                     pane: 'priorityPane',
-                    style: { fillColor: '#ff7800', weight: 2, color: '#fff', fillOpacity: 0.4 },
+                    style: { fillColor: '#add8e6', weight: 2, color: '#fff', fillOpacity: 0.6 },
                     interactive: false,
                     onEachFeature: function(feature, layer) {
                         var rawName = feature.properties.ADM2_EN;
