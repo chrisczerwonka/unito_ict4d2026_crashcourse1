@@ -14,6 +14,8 @@
         .leaflet-tooltip { background: transparent; border: none; box-shadow: none; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 2px white, -1px -1px 2px white; }
         .capital-label { color: #d73027; font-size: 16px; font-weight: 900 !important; }
         .map-title { padding: 10px 15px; font: bold 18px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.9); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; text-align: center; max-width: 500px; }
+        .zoom-icon { cursor: pointer; margin-left: 5px; font-size: 14px; vertical-align: middle; }
+        .zoom-icon:hover { opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -74,8 +76,10 @@
         };
 
         var districtGroups = {};
+        var counts = { "All other districts": 0 };
         Object.keys(reverseMapping).forEach(function(d) {
             districtGroups[d] = L.layerGroup().addTo(map);
+            counts[d] = 0;
         });
         var otherDistrictsGroup = L.layerGroup().addTo(map);
 
@@ -105,97 +109,116 @@
         // --- LAYER CONTROL ---
         var baseMaps = { "Normal View": normal, "Satellite View": satellite, "Terrain View": terrain };
         var overlays = {};
-        
         var layerControl = L.control.layers(baseMaps, overlays, { collapsed: false, position: 'topleft' }).addTo(map);
 
-        // Add district groups to control
-        Object.keys(districtGroups).forEach(function(d) {
-            layerControl.addOverlay(districtGroups[d], "District: " + d);
-        });
-        layerControl.addOverlay(otherDistrictsGroup, "All other districts");
-
-        // --- CUSTOM ZOOM BEHAVIOR FOR LAYER CONTROL ---
-        // After adding all overlays, we find the labels and add click events
-        setTimeout(function() {
-            var labels = document.querySelectorAll('.leaflet-control-layers-overlays label span');
-            labels.forEach(function(span) {
-                var text = span.innerText.trim();
-                if (text.startsWith("District: ")) {
-                    var districtName = text.replace("District: ", "");
-                    span.style.cursor = "pointer";
-                    span.style.textDecoration = "underline";
-                    span.title = "Click to zoom to " + districtName;
-                    
-                    span.onclick = function(e) {
-                        // Find the polygon for this district to get bounds
-                        var group = districtGroups[districtName];
-                        var bounds = L.latLngBounds();
-                        group.eachLayer(function(layer) {
-                            if (layer instanceof L.GeoJSON) {
-                                bounds.extend(layer.getBounds());
+        // We will add the overlays later once counts are calculated
+        var addedOverlays = false;
+        function updateLayerControl() {
+            if (addedOverlays) return;
+            Object.keys(districtGroups).forEach(function(d) {
+                layerControl.addOverlay(districtGroups[d], "District: " + d + " (" + counts[d] + ")");
+            });
+            layerControl.addOverlay(otherDistrictsGroup, "All other districts (" + counts["All other districts"] + ")");
+            addedOverlays = true;
+            
+            // Post-process the labels to add zoom icons
+            setTimeout(function() {
+                var labels = document.querySelectorAll('.leaflet-control-layers-overlays label span');
+                labels.forEach(function(span) {
+                    var text = span.innerText.trim();
+                    if (text.startsWith("District: ")) {
+                        // Extract original district name from label like "District: Chattogram (15)"
+                        var districtName = text.split(" (")[0].replace("District: ", "");
+                        
+                        // Add magnifying glass
+                        var zoomIcon = document.createElement('span');
+                        zoomIcon.innerHTML = ' 🔍';
+                        zoomIcon.className = 'zoom-icon';
+                        zoomIcon.title = "Zoom to " + districtName;
+                        zoomIcon.onclick = function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            var group = districtGroups[districtName];
+                            var bounds = L.latLngBounds();
+                            group.eachLayer(function(layer) {
+                                if (layer instanceof L.GeoJSON) {
+                                    bounds.extend(layer.getBounds());
+                                }
+                            });
+                            if (bounds.isValid()) {
+                                map.fitBounds(bounds, { padding: [50, 50] });
                             }
-                        });
-                        if (bounds.isValid()) {
-                            map.fitBounds(bounds, { padding: [50, 50] });
-                        }
-                    };
+                        };
+                        span.appendChild(zoomIcon);
+                    }
+                });
+            }, 100);
+        }
+
+        // --- FETCH DATA ---
+        var pDistrictsPromise = fetch('../priority_districts.geojson').then(r => r.json());
+        var pFloodsPromise = fetch('../bangladesh_floods.geojson').then(r => r.json());
+
+        Promise.all([pDistrictsPromise, pFloodsPromise]).then(function(results) {
+            var districtsData = results[0];
+            var floodsData = results[1];
+
+            // 1. Calculate counts
+            floodsData.features.forEach(function(f) {
+                var rawName = f.properties.ADM2_EN;
+                var displayName = priorityMapping[rawName];
+                if (displayName) counts[displayName]++;
+                else counts["All other districts"]++;
+            });
+
+            // 2. Add Priority District Polygons
+            L.geoJSON(districtsData, {
+                pane: 'priorityPane',
+                style: { fillColor: '#add8e6', weight: 2, color: '#fff', fillOpacity: 0.6 },
+                interactive: false,
+                onEachFeature: function(feature, layer) {
+                    var rawName = feature.properties.ADM2_EN;
+                    var displayName = priorityMapping[rawName] || rawName;
+                    var group = districtGroups[displayName] || otherDistrictsGroup;
+                    
+                    var center = layer.getBounds().getCenter();
+                    L.marker(center, {
+                        icon: L.divIcon({ className: 'leaflet-tooltip', html: '<b>' + displayName + '</b>' }),
+                        interactive: false
+                    }).addTo(group);
+                    
+                    layer.addTo(group);
                 }
             });
-        }, 1000);
 
-        // --- PRIORITY DISTRICT POLYGONS ---
-        fetch('../priority_districts.geojson')
-            .then(res => res.json())
-            .then(data => {
-                L.geoJSON(data, {
-                    pane: 'priorityPane',
-                    style: { fillColor: '#add8e6', weight: 2, color: '#fff', fillOpacity: 0.6 },
-                    interactive: false,
-                    onEachFeature: function(feature, layer) {
-                        var rawName = feature.properties.ADM2_EN;
-                        var displayName = priorityMapping[rawName] || rawName;
-                        var group = districtGroups[displayName] || otherDistrictsGroup;
-                        
-                        // Add label
-                        var center = layer.getBounds().getCenter();
-                        L.marker(center, {
-                            icon: L.divIcon({ className: 'leaflet-tooltip', html: '<b>' + displayName + '</b>' }),
-                            interactive: false
-                        }).addTo(group);
-                        
-                        layer.addTo(group);
-                    }
-                });
+            // 3. Add Flood Events
+            L.geoJSON(floodsData, {
+                pane: 'floodPane',
+                pointToLayer: function (feature, latlng) {
+                    var sev = feature.properties.Severity;
+                    var color = sev >= 2 ? "#d73027" : (sev >= 1.5 ? "#fc8d59" : "#fee08b");
+                    var radius = sev >= 2 ? 10 : (sev >= 1.5 ? 8 : 6);
+                    
+                    var marker = L.circleMarker(latlng, {
+                        radius: radius, fillColor: color, color: "#fff", weight: 1.5, fillOpacity: 1
+                    });
+
+                    var rawName = feature.properties.ADM2_EN;
+                    var displayName = priorityMapping[rawName];
+                    var group = displayName ? districtGroups[displayName] : otherDistrictsGroup;
+                    
+                    marker.addTo(group);
+                    return marker;
+                },
+                onEachFeature: function(feature, layer) {
+                    var p = feature.properties;
+                    layer.bindPopup("<b>Flood Event</b><br>District: " + (priorityMapping[p.ADM2_EN] || p.ADM2_EN) + "<br>Cause: "+p.MainCause+"<br>Severity: "+p.Severity+"<br>Began: "+p.Began);
+                }
             });
 
-        // --- FLOOD EVENTS (Categorized by District) ---
-        fetch('../bangladesh_floods.geojson')
-            .then(res => res.json())
-            .then(data => {
-                L.geoJSON(data, {
-                    pane: 'floodPane',
-                    pointToLayer: function (feature, latlng) {
-                        var sev = feature.properties.Severity;
-                        var color = sev >= 2 ? "#d73027" : (sev >= 1.5 ? "#fc8d59" : "#fee08b");
-                        var radius = sev >= 2 ? 10 : (sev >= 1.5 ? 8 : 6);
-                        
-                        var marker = L.circleMarker(latlng, {
-                            radius: radius, fillColor: color, color: "#fff", weight: 1.5, fillOpacity: 1
-                        });
-
-                        var rawName = feature.properties.ADM2_EN;
-                        var displayName = priorityMapping[rawName];
-                        var group = displayName ? districtGroups[displayName] : otherDistrictsGroup;
-                        
-                        marker.addTo(group);
-                        return marker;
-                    },
-                    onEachFeature: function(feature, layer) {
-                        var p = feature.properties;
-                        layer.bindPopup("<b>Flood Event</b><br>District: " + (priorityMapping[p.ADM2_EN] || p.ADM2_EN) + "<br>Cause: "+p.MainCause+"<br>Severity: "+p.Severity+"<br>Began: "+p.Began);
-                    }
-                });
-            });
+            // 4. Update Control
+            updateLayerControl();
+        });
 
         // --- LEGEND ---
         var legend = L.control({position: 'bottomright'});
@@ -205,7 +228,7 @@
             div.innerHTML += '<i style="background:#d73027"></i> High (2.0)<br>';
             div.innerHTML += '<i style="background:#fc8d59"></i> Moderate (1.5)<br>';
             div.innerHTML += '<i style="background:#fee08b"></i> Low (1.0)<br>';
-            div.innerHTML += '<hr><i style="background:#ff7800"></i> Priority District<br>';
+            div.innerHTML += '<hr><i style="background:#add8e6; opacity: 0.6"></i> Priority District<br>';
             div.innerHTML += '<span style="color:#d73027">★</span> Capital (Dhaka)';
             return div;
         };
