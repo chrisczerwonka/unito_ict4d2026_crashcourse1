@@ -13,6 +13,7 @@
         .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.8; border: 1px solid #999; }
         .leaflet-tooltip { background: transparent; border: none; box-shadow: none; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 2px white, -1px -1px 2px white; }
         .capital-label { color: #d73027; font-size: 16px; font-weight: 900 !important; }
+        .country-label { color: #31a354; font-size: 24px; font-weight: 900 !important; text-transform: uppercase; letter-spacing: 2px; }
     </style>
 </head>
 <body>
@@ -43,13 +44,13 @@
         map.getPane('floodPane').style.zIndex = 650;
 
         // --- LAYER GROUPS ---
-        var priorityLayer = L.layerGroup().addTo(map);
         var sev1Group = L.layerGroup().addTo(map);
         var sev15Group = L.layerGroup().addTo(map);
         var sev2Group = L.layerGroup().addTo(map);
-
+        var boundaryLayer = L.layerGroup().addTo(map);
+        
         // --- WORLD MASK (Shade everything outside Bangladesh) ---
-        fetch('world_mask.geojson')
+        fetch('../world_mask.geojson')
             .then(res => res.json())
             .then(data => {
                 L.geoJSON(data, {
@@ -59,36 +60,62 @@
             });
 
         // --- BANGLADESH BOUNDARY (Internal shade) ---
-        fetch('bd_boundary.geojson')
+        fetch('../bd_boundary.geojson')
             .then(res => res.json())
             .then(data => {
                 L.geoJSON(data, {
-                    style: { fillColor: '#a1d99b', color: '#31a354', weight: 1, fillOpacity: 0.1, interactive: false }
-                }).addTo(map);
+                    style: { fillColor: '#a1d99b', color: '#31a354', weight: 2, fillOpacity: 0.1, interactive: false }
+                }).addTo(boundaryLayer);
             });
+
+        // --- COUNTRY LABEL ---
+        var bangladeshIcon = L.divIcon({ className: 'leaflet-tooltip country-label', html: 'BANGLADESH' });
+        L.marker([23.8, 90.3], { icon: bangladeshIcon, interactive: false }).addTo(boundaryLayer);
 
         // --- DHAKA CAPITAL MARKER ---
         var dhakaIcon = L.divIcon({ className: 'leaflet-tooltip capital-label', html: '★ DHAKA' });
         L.marker([23.8103, 90.4125], { icon: dhakaIcon, interactive: false }).addTo(map);
 
-        // --- PRIORITY DISTRICTS ---
-        fetch('priority_districts.geojson')
+        // --- LAYER CONTROL SETUP ---
+        var baseMaps = { "Normal View": normal, "Satellite View": satellite, "Terrain View": terrain };
+        var overlays = {
+            "<b>Country Boundary</b>": boundaryLayer,
+            "Flood: High Severity (2+)": sev2Group,
+            "Flood: Moderate (1.5)": sev15Group,
+            "Flood: Low (1)": sev1Group
+        };
+        
+        var layerControl = L.control.layers(baseMaps, overlays, { collapsed: false }).addTo(map);
+
+        // --- PRIORITY DISTRICTS (Individual Layers) ---
+        fetch('../priority_districts.geojson')
             .then(res => res.json())
             .then(data => {
-                L.geoJSON(data, {
-                    pane: 'priorityPane',
-                    style: { fillColor: '#ff7800', weight: 2, color: '#fff', fillOpacity: 0.6 },
-                    onEachFeature: function(feature, layer) {
-                        var name = feature.properties.ADM2_EN;
-                        // Add permanent bold labels
-                        var center = layer.getBounds().getCenter();
-                        L.marker(center, {
-                            icon: L.divIcon({ className: 'leaflet-tooltip', html: '<b>' + name + '</b>' }),
-                            interactive: false
-                        }).addTo(priorityLayer);
-                        layer.bindPopup("<b>Priority District:</b> " + name);
-                    }
-                }).addTo(priorityLayer);
+                data.features.forEach(function(feature) {
+                    var name = feature.properties.ADM2_EN;
+                    var districtGroup = L.layerGroup();
+                    
+                    var polygon = L.geoJSON(feature, {
+                        pane: 'priorityPane',
+                        style: { fillColor: '#ff7800', weight: 2, color: '#fff', fillOpacity: 0.6 }
+                    });
+                    
+                    polygon.bindPopup("<b>Priority District:</b> " + name);
+                    polygon.addTo(districtGroup);
+                    
+                    // Add permanent label
+                    var center = polygon.getBounds().getCenter();
+                    L.marker(center, {
+                        icon: L.divIcon({ className: 'leaflet-tooltip', html: '<b>' + name + '</b>' }),
+                        interactive: false
+                    }).addTo(districtGroup);
+                    
+                    // Add to map initially
+                    districtGroup.addTo(map);
+                    
+                    // Add to layer control
+                    layerControl.addOverlay(districtGroup, "District: " + name);
+                });
             });
 
         // --- FLOOD EVENTS (FILTERED & CATEGORIZED) ---
@@ -119,16 +146,6 @@
                     }
                 });
             });
-
-        // --- LAYER CONTROL ---
-        var baseMaps = { "Normal View": normal, "Satellite View": satellite, "Terrain View": terrain };
-        var overlays = {
-            "<b>Priority Districts</b>": priorityLayer,
-            "Flood: High Severity (2+)": sev2Group,
-            "Flood: Moderate (1.5)": sev15Group,
-            "Flood: Low (1)": sev1Group
-        };
-        L.control.layers(baseMaps, overlays, { collapsed: false }).addTo(map);
 
         // --- LEGEND ---
         var legend = L.control({position: 'bottomright'});
