@@ -20,39 +20,47 @@
         .unified-control b { display: block; margin-top: 10px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
         .unified-control .legend-item { line-height: 18px; color: #333; margin-top: 5px; }
         .unified-control .legend-item i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.8; border: 1px solid #999; }
-        .unified-control .leaflet-control-layers-overlays { margin-top: 10px; }
+        .district-row { display: flex; align-items: center; justify-content: space-between; margin-top: 5px; padding: 2px 0; }
+        .district-name { font-size: 13px; color: #333; }
+        .reset-btn { width: 100%; margin-top: 10px; padding: 5px; cursor: pointer; background: #fff; border: 1px solid #ccc; border-radius: 3px; font-weight: bold; }
+        .reset-btn:hover { background: #f0f0f0; }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script>
-        // Use CartoDB Light Voyager with No Labels, then add English labels separately
-        var map = L.map('map').setView([23.6850, 90.3563], 7);
+        var initialView = [23.6850, 90.3563];
+        var initialZoom = 7;
+        var map = L.map('map').setView(initialView, initialZoom);
 
         // --- BASE LAYERS ---
-        // Light base without labels
         var base = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
         }).addTo(map);
 
-        // English labels only
+        // --- OVERLAY PANES ---
+        // Order: Base -> Mask (ROW) -> Boundary (BD Green) -> Priority (Blue) -> Labels (English) -> Floods
+        map.createPane('maskPane');
+        map.getPane('maskPane').style.zIndex = 300;
+        map.createPane('boundaryPane');
+        map.getPane('boundaryPane').style.zIndex = 350;
+        map.createPane('priorityPane');
+        map.getPane('priorityPane').style.zIndex = 400;
+        map.createPane('labelPane');
+        map.getPane('labelPane').style.zIndex = 500;
+        map.createPane('floodPane');
+        map.getPane('floodPane').style.zIndex = 650;
+
+        // English labels on top of masks but under floods
         var labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-            pane: 'markerPane' // Ensure labels are on top
+            pane: 'labelPane'
         }).addTo(map);
 
         var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Esri World Imagery'
         });
-
-        // --- OVERLAY PANES ---
-        map.createPane('maskPane');
-        map.getPane('maskPane').style.zIndex = 300;
-        map.createPane('priorityPane');
-        map.getPane('priorityPane').style.zIndex = 400;
-        map.createPane('floodPane');
-        map.getPane('floodPane').style.zIndex = 650;
 
         // --- TITLE OVERLAY ---
         var title = L.control({position: 'topright'});
@@ -63,109 +71,80 @@
         };
         title.addTo(map);
 
-        // --- LAYER GROUPS ---
-        var boundaryLayer = L.layerGroup().addTo(map);
-        
+        // --- DATA STATE ---
         var priorityMapping = {
-            "Chittagong": "Chattogram",
-            "Feni": "Feni",
-            "Comilla": "Cumilla",
-            "Munshiganj": "Munshiganj",
-            "Tangail": "Tangail",
-            "Narsingdi": "Narshingdi"
+            "Chittagong": "Chattogram", "Feni": "Feni", "Comilla": "Cumilla",
+            "Munshiganj": "Munshiganj", "Tangail": "Tangail", "Narsingdi": "Narshingdi"
         };
-        var reverseMapping = {
-            "Chattogram": "Chittagong",
-            "Feni": "Feni",
-            "Cumilla": "Comilla",
-            "Munshiganj": "Munshiganj",
-            "Tangail": "Tangail",
-            "Narshingdi": "Narsingdi"
-        };
-
-        var districtGroups = {};
+        var districtBounds = {};
         var counts = { "All other districts": 0 };
-        Object.keys(reverseMapping).forEach(function(d) {
-            districtGroups[d] = L.layerGroup().addTo(map);
-            counts[d] = 0;
-        });
-        var otherDistrictsGroup = L.layerGroup().addTo(map);
+        Object.keys(priorityMapping).forEach(k => { counts[priorityMapping[k]] = 0; });
 
-        // --- WORLD MASK (Pale gray transparent overlay) ---
+        // --- WORLD MASK (ROW) ---
         fetch('../world_mask.geojson')
             .then(res => res.json())
             .then(data => {
                 L.geoJSON(data, {
                     pane: 'maskPane',
-                    style: { fillColor: '#cccccc', color: 'none', fillOpacity: 0.4, interactive: false }
+                    style: { fillColor: '#555', color: 'none', fillOpacity: 0.2, interactive: false }
                 }).addTo(map);
             });
 
-        // --- BANGLADESH BOUNDARY ---
+        // --- BANGLADESH BOUNDARY (Light Green Outside Priority) ---
         fetch('../bd_boundary.geojson')
             .then(res => res.json())
             .then(data => {
                 L.geoJSON(data, {
-                    style: { fillColor: '#ffffff', color: '#666', weight: 2, fillOpacity: 0.1, interactive: false }
-                }).addTo(boundaryLayer);
+                    pane: 'boundaryPane',
+                    style: { fillColor: '#90ee90', color: '#666', weight: 1.5, fillOpacity: 0.25, interactive: false }
+                }).addTo(map);
             });
 
         // --- DHAKA CAPITAL MARKER ---
         var dhakaIcon = L.divIcon({ className: 'leaflet-tooltip capital-label', html: '★ DHAKA' });
-        L.marker([23.8103, 90.4125], { icon: dhakaIcon, interactive: false }).addTo(map);
+        L.marker([23.8103, 90.4125], { icon: dhakaIcon, interactive: false, pane: 'labelPane' }).addTo(map);
 
-        // --- CONSOLIDATED UNIFIED CONTROL ---
-        var baseMaps = { "Map View": base, "Satellite View": satellite };
-        var overlays = {};
-        var layerControl = L.control.layers(baseMaps, overlays, { collapsed: false, position: 'topleft' }).addTo(map);
-
-        // Add class for custom styling
-        var controlContainer = layerControl.getContainer();
-        L.DomUtil.addClass(controlContainer, 'unified-control info');
-
-        function updateLayerControl() {
-            // Add District Overlays
-            Object.keys(districtGroups).forEach(function(d) {
-                layerControl.addOverlay(districtGroups[d], "District: " + d + " (" + counts[d] + ")");
-            });
-            layerControl.addOverlay(otherDistrictsGroup, "All other districts (" + counts["All other districts"] + ")");
-            
-            // Append Legend to the Control Container
-            var legendSection = L.DomUtil.create('div', 'legend-section', controlContainer);
-            legendSection.innerHTML = '<b>Severity Legend</b>' +
+        // --- CONSOLIDATED CONTROL ---
+        var customControl = L.control({position: 'topleft'});
+        customControl.onAdd = function(map) {
+            var div = L.DomUtil.create('div', 'unified-control info');
+            div.innerHTML = '<b>Base Layers</b>' +
+                '<div><input type="radio" name="base" id="base_map" checked> <label for="base_map">Map View</label></div>' +
+                '<div><input type="radio" name="base" id="base_sat"> <label for="base_sat">Satellite View</label></div>' +
+                '<b>Districts</b>' +
+                '<div id="district_list"></div>' +
+                '<button class="reset-btn" id="reset_zoom">Reset to Country Level</button>' +
+                '<b>Severity Legend</b>' +
                 '<div class="legend-item"><i style="background:#d73027"></i> High (2.0)</div>' +
                 '<div class="legend-item"><i style="background:#fc8d59"></i> Moderate (1.5)</div>' +
                 '<div class="legend-item"><i style="background:#fee08b"></i> Low (1.0)</div>' +
                 '<div class="legend-item"><hr><i style="background:#add8e6"></i> Priority District</div>' +
+                '<div class="legend-item"><i style="background:#90ee90; opacity: 0.25"></i> Other BD Districts</div>' +
                 '<div class="legend-item"><span style="color:#d73027">★</span> Capital (Dhaka)</div>';
             
-            // Add zoom icons
-            function addIcons() {
-                var labels = document.querySelectorAll('.leaflet-control-layers-overlays label span');
-                labels.forEach(function(span) {
-                    if (span.querySelector('.zoom-icon')) return;
-                    var text = span.innerText.trim();
-                    if (text.startsWith("District: ")) {
-                        var districtName = text.split(" (")[0].replace("District: ", "");
-                        var zoomIcon = document.createElement('span');
-                        zoomIcon.innerHTML = '🔍';
-                        zoomIcon.className = 'zoom-icon';
-                        zoomIcon.onclick = function(e) {
-                            e.preventDefault(); e.stopPropagation();
-                            var group = districtGroups[districtName];
-                            var bounds = L.latLngBounds();
-                            group.eachLayer(function(layer) {
-                                if (layer.getBounds) bounds.extend(layer.getBounds());
-                            });
-                            if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50] });
-                        };
-                        span.appendChild(zoomIcon);
-                    }
-                });
-            }
-            
-            setTimeout(addIcons, 200);
-            map.on('overlayadd overlayremove', function() { setTimeout(addIcons, 10); });
+            // Radio logic
+            setTimeout(() => {
+                div.querySelector('#base_map').onclick = () => { map.removeLayer(satellite); map.addLayer(base); map.addLayer(labels); };
+                div.querySelector('#base_sat').onclick = () => { map.removeLayer(base); map.removeLayer(labels); map.addLayer(satellite); };
+                div.querySelector('#reset_zoom').onclick = () => { map.setView(initialView, initialZoom); };
+            }, 0);
+            return div;
+        };
+        customControl.addTo(map);
+
+        function populateDistricts() {
+            var list = document.getElementById('district_list');
+            Object.keys(priorityMapping).sort().forEach(k => {
+                var d = priorityMapping[k];
+                var row = L.DomUtil.create('div', 'district-row', list);
+                row.innerHTML = '<span class="district-name">' + d + ' (' + counts[d] + ')</span>' +
+                                '<span class="zoom-icon" title="Zoom to ' + d + '">🔍</span>';
+                row.querySelector('.zoom-icon').onclick = () => {
+                    if (districtBounds[d]) map.fitBounds(districtBounds[d], { padding: [50, 50] });
+                };
+            });
+            var other = L.DomUtil.create('div', 'district-row', list);
+            other.innerHTML = '<span class="district-name">All other districts (' + counts["All other districts"] + ')</span>';
         }
 
         // --- FETCH DATA ---
@@ -176,29 +155,25 @@
             var districtsData = results[0];
             var floodsData = results[1];
 
-            floodsData.features.forEach(function(f) {
-                var rawName = f.properties.ADM2_EN;
-                var displayName = priorityMapping[rawName];
-                if (displayName) counts[displayName]++;
-                else counts["All other districts"]++;
+            floodsData.features.forEach(f => {
+                var d = priorityMapping[f.properties.ADM2_EN];
+                if (d) counts[d]++; else counts["All other districts"]++;
             });
 
             L.geoJSON(districtsData, {
                 pane: 'priorityPane',
-                style: { fillColor: '#add8e6', weight: 2, color: '#fff', fillOpacity: 0.6 },
+                style: { fillColor: '#add8e6', weight: 2, color: '#fff', fillOpacity: 0.65 },
                 interactive: false,
                 onEachFeature: function(feature, layer) {
-                    var rawName = feature.properties.ADM2_EN;
-                    var displayName = priorityMapping[rawName] || rawName;
-                    var group = districtGroups[displayName] || otherDistrictsGroup;
+                    var d = priorityMapping[feature.properties.ADM2_EN];
+                    districtBounds[d] = layer.getBounds();
                     var center = layer.getBounds().getCenter();
                     L.marker(center, {
-                        icon: L.divIcon({ className: 'leaflet-tooltip', html: '<b>' + displayName + '</b>' }),
-                        interactive: false
-                    }).addTo(group);
-                    layer.addTo(group);
+                        icon: L.divIcon({ className: 'leaflet-tooltip', html: '<b>' + d + '</b>' }),
+                        interactive: false, pane: 'labelPane'
+                    }).addTo(map);
                 }
-            });
+            }).addTo(map);
 
             L.geoJSON(floodsData, {
                 pane: 'floodPane',
@@ -206,22 +181,17 @@
                     var sev = feature.properties.Severity;
                     var color = sev >= 2 ? "#d73027" : (sev >= 1.5 ? "#fc8d59" : "#fee08b");
                     var radius = sev >= 2 ? 10 : (sev >= 1.5 ? 8 : 6);
-                    var marker = L.circleMarker(latlng, {
+                    return L.circleMarker(latlng, {
                         radius: radius, fillColor: color, color: "#fff", weight: 1.5, fillOpacity: 1
                     });
-                    var rawName = feature.properties.ADM2_EN;
-                    var displayName = priorityMapping[rawName];
-                    var group = displayName ? districtGroups[displayName] : otherDistrictsGroup;
-                    marker.addTo(group);
-                    return marker;
                 },
                 onEachFeature: function(feature, layer) {
                     var p = feature.properties;
                     layer.bindPopup("<b>Flood Event</b><br>District: " + (priorityMapping[p.ADM2_EN] || p.ADM2_EN) + "<br>Cause: "+p.MainCause+"<br>Severity: "+p.Severity+"<br>Began: "+p.Began);
                 }
-            });
+            }).addTo(map);
 
-            updateLayerControl();
+            populateDistricts();
         });
     </script>
 </body>
