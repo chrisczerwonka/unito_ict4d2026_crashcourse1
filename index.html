@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
         body { margin: 0; padding: 0; }
-        #map { height: 100vh; width: 100%; background: #222; }
+        #map { height: 100vh; width: 100%; background: #f0f0f0; }
         .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.9); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; }
         .legend { line-height: 24px; color: #333; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
         .legend i { width: 20px; height: 20px; float: left; margin-right: 10px; opacity: 0.8; border: 1px solid #999; }
@@ -23,59 +23,56 @@
         // Create a custom pane for flood events to ensure they stay on top AND are clickable
         var floodPane = map.createPane('floodPane');
         floodPane.style.zIndex = 650; // Higher than district layers (default overlayPane is 400)
-        // CRITICAL: We do NOT set pointerEvents = 'none' here so the markers can be clicked
 
-        // Dark base map with English labels
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
+        // LIGHT base map with English labels (OpenStreetMap Standard)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             maxZoom: 19
         }).addTo(map);
 
-        // Styling for NON-priority districts
-        function styleOtherDistricts(feature) {
+        // Styling for the overall Bangladesh boundary (Lightly shaded, no internal borders)
+        function styleBoundary(feature) {
             return {
-                fillColor: '#006d2c',
-                weight: 1.5,
+                fillColor: '#a1d99b', // Very Light Green
+                weight: 2,
                 opacity: 1,
-                color: '#fff',
-                fillOpacity: 0.6,
-                interactive: true // Districts are also clickable for their own info
+                color: '#31a354', // Green border for the country outline
+                fillOpacity: 0.2
             };
         }
 
-        // Styling for priority districts
+        // Styling for priority districts (Highlighted boldly)
         function stylePriorityDistricts(feature) {
             return {
-                fillColor: '#ff7800',
-                weight: 3,
+                fillColor: '#ff7800', // Bold Orange
+                weight: 2,
                 opacity: 1,
                 color: '#fff',
-                fillOpacity: 0.85,
+                fillOpacity: 0.7,
                 interactive: true
             };
         }
 
-        // 1. Load Background Districts (lowest layer)
-        fetch('other_districts.geojson')
+        // 1. Load Overall Bangladesh Boundary (ADM0)
+        fetch('bd_boundary.geojson')
             .then(res => res.json())
             .then(data => {
-                L.geoJSON(data, { style: styleOtherDistricts }).addTo(map);
+                L.geoJSON(data, { style: styleBoundary, interactive: false }).addTo(map);
             });
 
-        // 2. Load Priority Districts (middle layer)
+        // 2. Load Priority Districts (Highlighted)
         fetch('priority_districts.geojson')
             .then(res => res.json())
             .then(data => {
                 L.geoJSON(data, {
                     style: stylePriorityDistricts,
                     onEachFeature: function(feature, layer) {
-                        layer.bindPopup("<b>Priority District:</b> " + feature.properties.ADM2_EN);
+                        layer.bindPopup("<b>Priority District:</b> " + (feature.properties.ADM2_EN || "District"));
                     }
                 }).addTo(map);
             });
 
-        // 3. Load Flood Events (TOP LAYER - using custom pane)
+        // 3. Load Flood Events (TOP LAYER - in custom pane for interactivity)
         fetch('bangladesh_floods.geojson')
             .then(res => res.json())
             .then(data => {
@@ -83,7 +80,7 @@
                     pane: 'floodPane',
                     pointToLayer: function (feature, latlng) {
                         return L.circleMarker(latlng, {
-                            radius: 12, // Increased size for even easier clicking
+                            radius: 10,
                             fillColor: "#ff0000",
                             color: "#fff",
                             weight: 2,
@@ -112,8 +109,8 @@
         var legend = L.control({position: 'bottomright'});
         legend.onAdd = function (map) {
             var div = L.DomUtil.create('div', 'info legend'),
-                grades = ["Priority Districts", "Bangladesh Territory", "Flood Event (Click for details)"],
-                colors = ["#ff7800", "#006d2c", "#ff0000"];
+                grades = ["Priority Districts", "Bangladesh Territory", "Flood Event (Clickable)"],
+                colors = ["#ff7800", "#a1d99b", "#ff0000"];
 
             for (var i = 0; i < grades.length; i++) {
                 div.innerHTML +=
