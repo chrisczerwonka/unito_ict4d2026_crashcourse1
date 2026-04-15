@@ -9,32 +9,41 @@
         body { margin: 0; padding: 0; }
         #map { height: 100vh; width: 100%; background: #f0f0f0; }
         .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.9); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; }
-        .legend { line-height: 18px; color: #333; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
-        .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.8; border: 1px solid #999; }
         .leaflet-tooltip { background: transparent; border: none; box-shadow: none; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 2px white, -1px -1px 2px white; }
         .capital-label { color: #d73027; font-size: 16px; font-weight: 900 !important; }
         .map-title { padding: 10px 15px; font: bold 18px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.9); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; text-align: center; max-width: 500px; }
         .zoom-icon { cursor: pointer; margin-left: 8px; font-size: 14px; vertical-align: middle; display: inline-block; padding: 2px 5px; background: #eee; border-radius: 3px; border: 1px solid #ccc; }
         .zoom-icon:hover { background: #ddd; }
+        
+        /* Consolidated Control Styling */
+        .unified-control { max-height: 85vh; overflow-y: auto; width: 280px; }
+        .unified-control b { display: block; margin-top: 10px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+        .unified-control .legend-item { line-height: 18px; color: #333; margin-top: 5px; }
+        .unified-control .legend-item i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.8; border: 1px solid #999; }
+        .unified-control .leaflet-control-layers-overlays { margin-top: 10px; }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script>
+        // Use CartoDB Light Voyager with No Labels, then add English labels separately
         var map = L.map('map').setView([23.6850, 90.3563], 7);
 
         // --- BASE LAYERS ---
-        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
+        // Light base without labels
+        var base = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+        }).addTo(map);
+
+        // English labels only
+        var labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            pane: 'markerPane' // Ensure labels are on top
         }).addTo(map);
 
         var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Esri World Imagery'
-        });
-
-        var terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-            attribution: 'OpenTopoMap'
         });
 
         // --- OVERLAY PANES ---
@@ -82,13 +91,13 @@
         });
         var otherDistrictsGroup = L.layerGroup().addTo(map);
 
-        // --- WORLD MASK ---
+        // --- WORLD MASK (Pale gray transparent overlay) ---
         fetch('../world_mask.geojson')
             .then(res => res.json())
             .then(data => {
                 L.geoJSON(data, {
                     pane: 'maskPane',
-                    style: { fillColor: '#808080', color: 'none', fillOpacity: 0.25, interactive: false }
+                    style: { fillColor: '#cccccc', color: 'none', fillOpacity: 0.4, interactive: false }
                 }).addTo(map);
             });
 
@@ -97,7 +106,7 @@
             .then(res => res.json())
             .then(data => {
                 L.geoJSON(data, {
-                    style: { fillColor: '#a1d99b', color: '#31a354', weight: 2, fillOpacity: 0.1, interactive: false }
+                    style: { fillColor: '#ffffff', color: '#666', weight: 2, fillOpacity: 0.1, interactive: false }
                 }).addTo(boundaryLayer);
             });
 
@@ -105,18 +114,32 @@
         var dhakaIcon = L.divIcon({ className: 'leaflet-tooltip capital-label', html: '★ DHAKA' });
         L.marker([23.8103, 90.4125], { icon: dhakaIcon, interactive: false }).addTo(map);
 
-        // --- LAYER CONTROL ---
-        var baseMaps = { "OpenStreetMap": osm, "Satellite View": satellite, "Terrain View": terrain };
+        // --- CONSOLIDATED UNIFIED CONTROL ---
+        var baseMaps = { "Map View": base, "Satellite View": satellite };
         var overlays = {};
         var layerControl = L.control.layers(baseMaps, overlays, { collapsed: false, position: 'topleft' }).addTo(map);
 
+        // Add class for custom styling
+        var controlContainer = layerControl.getContainer();
+        L.DomUtil.addClass(controlContainer, 'unified-control info');
+
         function updateLayerControl() {
+            // Add District Overlays
             Object.keys(districtGroups).forEach(function(d) {
                 layerControl.addOverlay(districtGroups[d], "District: " + d + " (" + counts[d] + ")");
             });
             layerControl.addOverlay(otherDistrictsGroup, "All other districts (" + counts["All other districts"] + ")");
             
-            // Add zoom icons after control is populated
+            // Append Legend to the Control Container
+            var legendSection = L.DomUtil.create('div', 'legend-section', controlContainer);
+            legendSection.innerHTML = '<b>Severity Legend</b>' +
+                '<div class="legend-item"><i style="background:#d73027"></i> High (2.0)</div>' +
+                '<div class="legend-item"><i style="background:#fc8d59"></i> Moderate (1.5)</div>' +
+                '<div class="legend-item"><i style="background:#fee08b"></i> Low (1.0)</div>' +
+                '<div class="legend-item"><hr><i style="background:#add8e6"></i> Priority District</div>' +
+                '<div class="legend-item"><span style="color:#d73027">★</span> Capital (Dhaka)</div>';
+            
+            // Add zoom icons
             function addIcons() {
                 var labels = document.querySelectorAll('.leaflet-control-layers-overlays label span');
                 labels.forEach(function(span) {
@@ -127,7 +150,6 @@
                         var zoomIcon = document.createElement('span');
                         zoomIcon.innerHTML = '🔍';
                         zoomIcon.className = 'zoom-icon';
-                        zoomIcon.title = "Zoom to " + districtName;
                         zoomIcon.onclick = function(e) {
                             e.preventDefault(); e.stopPropagation();
                             var group = districtGroups[districtName];
@@ -143,7 +165,6 @@
             }
             
             setTimeout(addIcons, 200);
-            // Re-add icons if the control UI is refreshed (e.g. on toggle)
             map.on('overlayadd overlayremove', function() { setTimeout(addIcons, 10); });
         }
 
@@ -202,20 +223,6 @@
 
             updateLayerControl();
         });
-
-        // --- LEGEND ---
-        var legend = L.control({position: 'bottomright'});
-        legend.onAdd = function (map) {
-            var div = L.DomUtil.create('div', 'info legend');
-            div.innerHTML += '<b>Severity Legend</b><br>';
-            div.innerHTML += '<i style="background:#d73027"></i> High (2.0)<br>';
-            div.innerHTML += '<i style="background:#fc8d59"></i> Moderate (1.5)<br>';
-            div.innerHTML += '<i style="background:#fee08b"></i> Low (1.0)<br>';
-            div.innerHTML += '<hr><i style="background:#add8e6"></i> Priority District<br>';
-            div.innerHTML += '<span style="color:#d73027">★</span> Capital (Dhaka)';
-            return div;
-        };
-        legend.addTo(map);
     </script>
 </body>
 </html>
