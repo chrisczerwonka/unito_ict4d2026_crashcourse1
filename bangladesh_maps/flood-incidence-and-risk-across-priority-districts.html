@@ -35,29 +35,30 @@
         var map = L.map('map').setView(initialView, initialZoom);
 
         // --- BASE LAYERS ---
+        // We use a base without ANY labels to completely avoid duplicates from the tile provider
         var base = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
         }).addTo(map);
 
         // --- OVERLAY PANES ---
-        // Order: Base -> Map Labels -> Mask (ROW) -> BD Green -> Priority -> Manual Labels -> Flood Events
-        map.createPane('tileLabelPane');
-        map.getPane('tileLabelPane').style.zIndex = 250;
         map.createPane('maskPane');
         map.getPane('maskPane').style.zIndex = 300;
         map.createPane('boundaryPane');
         map.getPane('boundaryPane').style.zIndex = 350;
         map.createPane('priorityPane');
         map.getPane('priorityPane').style.zIndex = 400;
-        map.createPane('boldLabelPane');
+        map.createPane('labelPane'); // Pane for English tile labels (dimmed)
+        map.getPane('labelPane').style.zIndex = 450;
+        map.createPane('boldLabelPane'); // Pane for bolded manual labels (on top)
         map.getPane('boldLabelPane').style.zIndex = 500;
         map.createPane('floodPane');
-        map.getPane('floodPane').style.zIndex = 700; // Explicitly highest on top
+        map.getPane('floodPane').style.zIndex = 700;
 
-        // Base Map Labels
+        // Dimmed English labels for context (not for priority districts)
         var labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-            pane: 'tileLabelPane'
+            pane: 'labelPane',
+            opacity: 0.5
         }).addTo(map);
 
         var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -180,7 +181,6 @@
                 pane: 'floodPane',
                 pointToLayer: function (feature, latlng) {
                     var sev = feature.properties.Severity;
-                    // Colors remain same, size increased
                     var color = sev >= 2 ? "#d73027" : (sev >= 1.5 ? "#fc8d59" : "#fee08b");
                     var radius = sev >= 2 ? 14 : (sev >= 1.5 ? 11 : 8);
                     
