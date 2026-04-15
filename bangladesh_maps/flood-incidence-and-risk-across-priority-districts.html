@@ -68,10 +68,6 @@
                 }).addTo(boundaryLayer);
             });
 
-        // --- COUNTRY LABEL ---
-        var bangladeshIcon = L.divIcon({ className: 'leaflet-tooltip country-label', html: 'BANGLADESH' });
-        L.marker([23.8, 90.3], { icon: bangladeshIcon, interactive: false }).addTo(boundaryLayer);
-
         // --- DHAKA CAPITAL MARKER ---
         var dhakaIcon = L.divIcon({ className: 'leaflet-tooltip capital-label', html: '★ DHAKA' });
         L.marker([23.8103, 90.4125], { icon: dhakaIcon, interactive: false }).addTo(map);
@@ -157,6 +153,14 @@
             div.innerHTML += '<i style="background:#fee08b"></i> Low (1.0)<br>';
             div.innerHTML += '<hr><i style="background:#ff7800"></i> Priority District<br>';
             div.innerHTML += '<span style="color:#d73027">★</span> Capital (Dhaka)';
+            return div;
+        };
+        legend.addTo(map);
+
+    </script>
+</body>
+</html>
+ (Dhaka)';
             return div;
         };
         legend.addTo(map);
