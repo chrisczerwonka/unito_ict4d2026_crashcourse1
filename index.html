@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bangladesh Flood Analytics & Telecom Infrastructure</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --bg-card: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    nav {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    nav .logo {
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    nav .links {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    nav .links a {
+      text-decoration: none;
+      color: var(--text);
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    nav .links a:hover {
+      color: var(--primary);
+    }
+
+    header {
+      max-width: 1000px;
+      margin: 4rem auto 2rem;
+      padding: 0 2rem;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+    }
+
+    header p {
+      font-size: 1.125rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto 4rem;
+      padding: 0 2rem;
+    }
+
+    section {
+      margin-top: 3rem;
+    }
+
+    section h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .card h3 {
+      margin-top: 0;
+      font-size: 1.125rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .card p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .metadata {
+      font-size: 0.75rem;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.25rem 0.75rem;
+    }
+
+    .metadata dt {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .metadata dd {
+      margin: 0;
+      color: var(--text);
+    }
+
+    .btn {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      background: var(--primary);
+      color: white;
+      text-decoration: none;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--primary-hover);
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="#" class="logo">Flood Analytics</a>
+    <div class="links">
+      <a href="bangladesh_maps/flood-incidence-and-risk-across-priority-districts.html">Interactive Map</a>
+      <a href="flood_analytics.html">Charts Dashboard</a>
+      <a href="map-visualizer.html">CSV Upload App</a>
+    </div>
+  </nav>
+
+  <header>
+    <h1>Bangladesh Flood Analytics & Infrastructure Risk</h1>
+    <p>Visualizing the intersection of historical flood data and telecom infrastructure to identify critical risk areas in priority districts.</p>
+  </header>
+
+  <div class="container">
+    <section>
+      <h2>Applications</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Interactive Map</h3>
+          <p>Detailed spatial visualization of flood risk across priority districts in Bangladesh.</p>
+          <a href="bangladesh_maps/flood-incidence-and-risk-across-priority-districts.html" class="btn">Launch Map</a>
+        </div>
+        <div class="card">
+          <h3>Charts Dashboard</h3>
+          <p>Analytics on global flood events and regional trends over the last decade.</p>
+          <a href="flood_analytics.html" class="btn">View Charts</a>
+        </div>
+        <div class="card">
+          <h3>CSV Upload Web App</h3>
+          <p>A flexible tool to visualize any CSV/TSV dataset containing latitude and longitude coordinates.</p>
+          <a href="map-visualizer.html" class="btn">Open App</a>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Datasets Used</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Global Flood Archive</h3>
+          <p>Cleaned historical data on flood events worldwide, including severity and main causes.</p>
+          <dl class="metadata">
+            <dt>Source</dt><dd>Dartmouth Flood Observatory</dd>
+            <dt>Format</dt><dd>CSV</dd>
+            <dt>Retrieved</dt><dd>April 2026</dd>
+          </dl>
+        </div>
+        <div class="card">
+          <h3>Telecom Infrastructure</h3>
+          <p>Locations of critical telecom towers and hubs across Bangladesh.</p>
+          <dl class="metadata">
+            <dt>Source</dt><dd>Local Telecom Operator</dd>
+            <dt>Format</dt><dd>GeoJSON</dd>
+            <dt>Retrieved</dt><dd>April 2026</dd>
+          </dl>
+        </div>
+        <div class="card">
+          <h3>District Flood Risk</h3>
+          <p>Incidence and risk level assessments for priority districts in Bangladesh.</p>
+          <dl class="metadata">
+            <dt>Source</dt><dd>BBS / National Disaster Management</dd>
+            <dt>Format</dt><dd>XLSX / GeoJSON</dd>
+            <dt>Retrieved</dt><dd>April 2026</dd>
+          </dl>
+        </div>
+        <div class="card">
+          <h3>At-Risk Infrastructure</h3>
+          <p>Derived dataset identifying telecom sites located in high-risk flood zones.</p>
+          <dl class="metadata">
+            <dt>Source</dt><dd>Spatial Analysis Result</dd>
+            <dt>Format</dt><dd>GeoJSON</dd>
+            <dt>Retrieved</dt><dd>April 2026</dd>
+          </dl>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    &copy; 2026 Unito-ICT4D Crash Course 1. All rights reserved.
+  </footer>
+
+</body>
+</html>
