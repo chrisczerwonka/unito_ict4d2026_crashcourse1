@@ -27,10 +27,9 @@
             background-color: var(--bg);
             color: var(--text);
             line-height: 1.6;
-            padding-top: 64px; /* Fixed nav space */
+            padding-top: 64px;
         }
 
-        /* Persistent Top Navigation Bar */
         .nav-container {
             position: fixed;
             top: 0;
@@ -108,6 +107,9 @@
             border-radius: 1rem;
             border: 1px solid var(--border);
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .card h3 {
@@ -118,6 +120,8 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
+
+        canvas { max-width: 100%; height: auto !important; }
 
         footer {
             text-align: center;
@@ -154,7 +158,7 @@
 
     <div class="dashboard">
         <div class="card">
-            <h3>Flood Events Over Time</h3>
+            <h3>Flood Events Over Time (Last 10Y)</h3>
             <canvas id="yearsChart"></canvas>
         </div>
         <div class="card">
@@ -166,7 +170,7 @@
             <canvas id="severityChart"></canvas>
         </div>
         <div class="card">
-            <h3>Dead vs. Displaced (Severity 3+)</h3>
+            <h3>Dead vs. Displaced (Severity 2+)</h3>
             <canvas id="impactChart"></canvas>
         </div>
     </div>
@@ -188,31 +192,32 @@
         function createCharts(data) {
             const yearCounts = {};
             data.forEach(row => {
-                const year = new Date(row.Began).getFullYear();
+                const year = row.Year;
                 if (year >= 2013 && year <= 2023) {
                     yearCounts[year] = (yearCounts[year] || 0) + 1;
                 }
             });
+            const sortedYears = Object.keys(yearCounts).sort();
 
             new Chart(document.getElementById('yearsChart'), {
                 type: 'line',
                 data: {
-                    labels: Object.keys(yearCounts),
+                    labels: sortedYears,
                     datasets: [{
                         label: 'Number of Events',
-                        data: Object.values(yearCounts),
+                        data: sortedYears.map(y => yearCounts[y]),
                         borderColor: '#0f172a',
                         backgroundColor: 'rgba(15, 23, 42, 0.1)',
                         fill: true,
                         tension: 0.4
                     }]
                 },
-                options: { plugins: { legend: { display: false } } }
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
             });
 
             const causeCounts = {};
             data.forEach(row => {
-                const cause = row['Main cause'] || 'Unknown';
+                const cause = row.categorised_reason || 'Unknown';
                 causeCounts[cause] = (causeCounts[cause] || 0) + 1;
             });
             const topCauses = Object.entries(causeCounts)
@@ -246,17 +251,17 @@
                         backgroundColor: '#0f172a'
                     }]
                 },
-                options: { plugins: { legend: { display: false } } }
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
             });
 
             const impactData = data
-                .filter(row => row.Severity === '2')
-                .slice(0, 50)
+                .filter(row => parseFloat(row.Severity) >= 2)
+                .slice(0, 100)
                 .map(row => ({
                     x: parseInt(row.Dead) || 0,
-                    y: parseInt(row.Displaced) || 0,
-                    r: 8
-                }));
+                    y: parseInt(row.Displaced) || 0
+                }))
+                .filter(p => p.x > 0 && p.y > 0);
 
             new Chart(document.getElementById('impactChart'), {
                 type: 'scatter',

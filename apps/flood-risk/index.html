@@ -32,7 +32,6 @@
       flex-direction: column;
     }
 
-    /* Persistent Top Navigation Bar */
     .nav-container {
       position: fixed;
       top: 0;
@@ -82,15 +81,18 @@
     }
 
     .map-header {
-      margin-top: 64px; /* Space for fixed nav */
+      margin-top: 64px;
       background: #fff;
-      padding: 2rem;
+      padding: 1.5rem 2rem;
       border-bottom: 1px solid var(--border);
       text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .map-header h1 {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       font-weight: 800;
       letter-spacing: -0.03em;
     }
@@ -101,8 +103,23 @@
       z-index: 1;
     }
 
-    .leaflet-popup-content-wrapper { border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
-    .leaflet-popup-content { font-family: 'Inter', sans-serif; font-size: 0.875rem; color: var(--text); }
+    .legend {
+        background: white;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        font-size: 0.75rem;
+        line-height: 1.5;
+        color: var(--text);
+    }
+
+    .legend i {
+        width: 12px;
+        height: 12px;
+        float: left;
+        margin-right: 8px;
+        border-radius: 50%;
+    }
   </style>
 </head>
 <body>
@@ -120,7 +137,8 @@
   </div>
 
   <div class="map-header">
-    <h1>Priority Districts: Flood Incidence & Risk</h1>
+    <h1>Priority Districts: Flood Incidence & Infrastructure</h1>
+    <div id="status" style="font-size: 0.75rem; color: var(--text-muted);">Loading events...</div>
   </div>
 
   <div id="map"></div>
@@ -129,15 +147,40 @@
     const map = L.map('map').setView([23.8103, 90.4125], 7);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+      attribution: '&copy; CARTO'
     }).addTo(map);
 
-    // Add marker for Dhaka
+    // Dhaka Marker
     L.marker([23.8103, 90.4125]).addTo(map)
-      .bindPopup('<b>Dhaka</b><br>Capital of Bangladesh')
-      .openPopup();
+      .bindPopup('<b>Dhaka</b><br>Capital of Bangladesh');
 
-    // Data for priority districts
+    // Load Flood Events
+    fetch('../../data/bangladesh_floods.geojson')
+      .then(res => res.json())
+      .then(data => {
+        L.geoJSON(data, {
+          pointToLayer: (feature, latlng) => {
+            return L.circleMarker(latlng, {
+              radius: 6,
+              fillColor: "#e11d48",
+              color: "#fff",
+              weight: 1,
+              opacity: 1,
+              fillOpacity: 0.8
+            });
+          },
+          onEachFeature: (feature, layer) => {
+            layer.bindPopup(`<b>Flood Event</b><br>${feature.properties.MainCause || 'Seasonal'}<br>Year: ${feature.properties.Year || 'N/A'}`);
+          }
+        }).addTo(map);
+        document.getElementById('status').textContent = `${data.features.length} events loaded`;
+      })
+      .catch(err => {
+          console.error(err);
+          document.getElementById('status').textContent = "Failed to load events";
+      });
+
+    // Priority Districts Overlay
     const priorityDistricts = [
       { name: "Chattogram", coords: [22.3569, 91.7832], risk: "High" },
       { name: "Feni", coords: [23.0159, 91.3976], risk: "Very High" },
@@ -149,13 +192,13 @@
 
     priorityDistricts.forEach(d => {
       L.circleMarker(d.coords, {
-        radius: 12,
-        fillColor: d.risk === "Very High" ? "#e11d48" : d.risk === "High" ? "#f97316" : "#eab308",
+        radius: 14,
+        fillColor: d.risk === "Very High" ? "#991b1b" : d.risk === "High" ? "#c2410c" : "#a16207",
         color: "#fff",
         weight: 2,
-        opacity: 1,
-        fillOpacity: 0.9
-      }).addTo(map).bindPopup(`<b>${d.name}</b><br>Flood Risk Level: <span style="font-weight:700">${d.risk}</span>`);
+        opacity: 0.5,
+        fillOpacity: 0.3
+      }).addTo(map).bindPopup(`<b>District: ${d.name}</b><br>Risk: ${d.risk}`);
     });
   </script>
 </body>

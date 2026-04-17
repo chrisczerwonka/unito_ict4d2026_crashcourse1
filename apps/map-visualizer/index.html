@@ -15,10 +15,12 @@
   <style>
     :root {
       --primary: #0f172a;
+      --primary-hover: #334155;
       --bg: #f1f5f9;
+      --bg-card: #ffffff;
+      --border: #cbd5e1;
       --text: #0f172a;
       --text-muted: #475569;
-      --border: #cbd5e1;
       --nav-bg: #0f172a;
       --nav-text: #f8fafc;
     }
@@ -34,10 +36,9 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      padding-top: 64px; /* Space for fixed nav */
+      padding-top: 64px;
     }
-
-    /* Persistent Top Navigation Bar */
+    
     .nav-container {
       position: fixed;
       top: 0;
@@ -85,109 +86,94 @@
       color: #fff;
       background: rgba(255,255,255,0.1);
     }
-    
-    /* Layout */
-    .app-container {
-      flex-grow: 1;
-      display: flex;
-      overflow: hidden;
-      position: relative;
-    }
-    
+
     /* Upload Screen */
     .upload-screen {
-      position: absolute;
-      inset: 0;
-      background: var(--bg);
-      z-index: 500;
+      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 2rem;
-      text-align: center;
-      transition: opacity 0.3s, visibility 0.3s;
-    }
-    
-    .upload-screen.hidden {
-      opacity: 0;
-      visibility: hidden;
-    }
-    
-    .upload-card {
-      background: #fff;
-      padding: 3rem;
-      border-radius: 1.5rem;
-      border: 2px dashed var(--border);
-      max-width: 600px;
-      width: 100%;
-      transition: all 0.2s;
-    }
-    
-    .upload-card:hover {
-      border-color: var(--primary);
-      background: #fff;
-    }
-    
-    /* Map & Sidebar */
-    .main-view {
-      flex-grow: 1;
-      display: flex;
-      width: 100%;
-    }
-    
-    #map {
-      flex-grow: 1;
-      height: 100%;
-      background: #e5e7eb;
-    }
-    
-    .sidebar {
-      width: 400px;
-      background: #fff;
-      border-left: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .sidebar-header {
-      padding: 1.5rem;
-      border-bottom: 1px solid var(--border);
-      background: #fff;
-    }
-    
-    .data-list {
-      flex-grow: 1;
       overflow-y: auto;
-      padding: 1rem;
     }
     
-    .data-item {
-      padding: 1rem;
-      border-bottom: 1px solid var(--border);
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    
-    .data-item:hover {
-      background: var(--bg);
-    }
+    .upload-screen.hidden { display: none; }
 
-    .btn {
-      background: var(--primary);
-      color: #fff;
-      padding: 0.75rem 1.5rem;
+    .upload-screen h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.05em;
+    }
+    
+    .subtitle {
+      color: var(--text-muted);
+      margin-bottom: 3rem;
+    }
+    
+    .upload-container {
+      width: 100%;
+      max-width: 32rem;
+      background: var(--bg-card);
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+      border: 1px solid var(--border);
+    }
+    
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 0.75rem;
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    
+    .dropzone:hover { border-color: var(--primary); background: #f8fafc; }
+    
+    .dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    
+    .divider { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; color: var(--text-muted); font-size: 0.875rem; }
+    .divider-line { flex: 1; height: 1px; background: var(--border); }
+    
+    .button-row { display: flex; gap: 1rem; }
+    
+    .btn-primary, .btn-secondary {
+      flex: 1;
+      padding: 0.75rem 1rem;
       border-radius: 0.5rem;
-      border: none;
+      font-size: 0.875rem;
       font-weight: 700;
       cursor: pointer;
-      font-family: inherit;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+      text-align: center;
     }
     
-    .btn:hover {
-      opacity: 0.9;
-    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-secondary { background: white; border-color: var(--border); color: var(--text); }
+    .btn-secondary:hover { background: #f8fafc; border-color: var(--primary); }
+
+    .paste-area { display: none; margin-top: 1.5rem; }
+    .paste-area.visible { display: block; }
+    textarea { width: 100%; height: 10rem; padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border); font-family: monospace; resize: none; margin-bottom: 1rem; }
+
+    /* Map Screen */
+    .map-screen { display: none; flex: 1; overflow: hidden; }
+    .map-screen.visible { display: flex; }
+    
+    .sidebar { width: 22rem; background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .sidebar-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .data-table-container { flex: 1; overflow: auto; }
+    .data-table { width: 100%; font-size: 0.75rem; border-collapse: collapse; }
+    .data-table th { position: sticky; top: 0; background: #f8fafc; padding: 0.75rem; border-bottom: 1px solid var(--border); }
+    .data-table td { padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--border); }
+    .data-table tr:hover { background: #f1f5f9; cursor: pointer; }
+
+    #map { flex: 1; z-index: 1; }
   </style>
 </head>
 <body>
@@ -204,47 +190,108 @@
     </nav>
   </div>
 
-  <div class="app-container">
-    <div class="upload-screen" id="uploadScreen">
-      <div class="upload-card">
-        <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 1rem;">CSV Data Visualizer</h1>
-        <p style="color: var(--text-muted); margin-bottom: 2rem;">Drop your CSV file here or click to select</p>
-        <input type="file" id="fileInput" hidden accept=".csv,.tsv">
-        <button class="btn" onclick="document.getElementById('fileInput').click()">Select File</button>
+  <div class="upload-screen" id="uploadScreen">
+    <h1>CSV Data Visualizer</h1>
+    <p class="subtitle">Instantly map any geographic dataset with coordinates</p>
+    
+    <div class="upload-container">
+      <div class="dropzone" id="dropzone">
+        <input type="file" accept=".csv,.tsv,.txt" id="fileInput" />
+        <p style="font-weight: 700; margin-bottom: 0.25rem;">Drag and drop your dataset</p>
+        <p style="font-size: 0.875rem; color: var(--text-muted);">or click to browse</p>
       </div>
-    </div>
-
-    <div class="main-view">
-      <div id="map"></div>
-      <div class="sidebar">
-        <div class="sidebar-header">
-          <h2 style="font-size: 1.25rem; font-weight: 800;">Dataset Records</h2>
-          <p id="recordCount" style="font-size: 0.875rem; color: var(--text-muted);">0 records found</p>
-        </div>
-        <div class="data-list" id="dataList">
-          <!-- Items will be injected here -->
-        </div>
+      
+      <div class="divider"><div class="divider-line"></div><span>OR</span><div class="divider-line"></div></div>
+      
+      <div class="button-row">
+        <button class="btn-secondary" id="pasteBtn">Paste CSV data</button>
+        <button class="btn-secondary" id="exampleBtn">Load example data</button>
+      </div>
+      
+      <div class="paste-area" id="pasteArea">
+        <textarea id="pasteTextarea" placeholder="Paste CSV/TSV data here..."></textarea>
+        <button class="btn-primary" id="submitPaste" style="width: 100%;">Load Data</button>
       </div>
     </div>
   </div>
+  
+  <div class="map-screen" id="mapScreen">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h2 id="datasetName" style="font-size: 0.875rem; font-weight: 800;">Dataset</h2>
+        <button onclick="location.reload()" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; cursor: pointer;">New</button>
+      </div>
+      <div class="data-table-container">
+        <table class="data-table">
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="map"></div>
+  </div>
 
   <script>
-    // Simplified script for theme demonstration
-    const fileInput = document.getElementById('fileInput');
-    const uploadScreen = document.getElementById('uploadScreen');
-    const map = L.map('map').setView([23.8, 90.3], 6);
+    const LAT_COLUMNS = ["lat", "latitude", "y"];
+    const LNG_COLUMNS = ["lng", "lon", "long", "longitude", "x"];
+    const EXAMPLE_DATA = `ID,Country,Latitude,Longitude,Event\n1,Mozambique,-19.8,34.8,Cyclone Idai\n2,Germany,50.5,7.1,River Flooding\n3,Bangladesh,23.8,90.4,Dhaka Flood`;
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap'
-    }).addTo(map);
+    let map = null, markerClusterGroup = null, allData = [], columns = [];
 
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        uploadScreen.classList.add('hidden');
-        // Data processing logic would go here
-      }
-    });
+    const fileInput = document.getElementById('fileInput'), pasteBtn = document.getElementById('pasteBtn'), 
+          exampleBtn = document.getElementById('exampleBtn'), pasteArea = document.getElementById('pasteArea'),
+          submitPaste = document.getElementById('submitPaste'), pasteTextarea = document.getElementById('pasteTextarea'),
+          uploadScreen = document.getElementById('uploadScreen'), mapScreen = document.getElementById('mapScreen');
+
+    function parseData(content) {
+      const lines = content.trim().split('\n').map(l => l.split(','));
+      if (lines.length < 2) return null;
+      const headers = lines[0].map(h => h.trim().toLowerCase());
+      const latIdx = headers.findIndex(h => LAT_COLUMNS.includes(h));
+      const lngIdx = headers.findIndex(h => LNG_COLUMNS.includes(h));
+      if (latIdx === -1 || lngIdx === -1) return alert("Latitude/Longitude not found"), null;
+      
+      return { 
+        columns: lines[0],
+        data: lines.slice(1).map(row => ({
+          lat: parseFloat(row[latIdx]), lng: parseFloat(row[lngIdx]),
+          raw: row
+        })).filter(r => !isNaN(r.lat) && !isNaN(r.lng))
+      };
+    }
+
+    function loadData(content, name) {
+      const res = parseData(content);
+      if (!res) return;
+      allData = res.data; columns = res.columns;
+      uploadScreen.classList.add('hidden'); mapScreen.classList.add('visible');
+      document.getElementById('datasetName').textContent = name;
+      
+      map = L.map('map').setView([20, 0], 2);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+      markerClusterGroup = L.markerClusterGroup().addTo(map);
+
+      allData.forEach(row => {
+        L.marker([row.lat, row.lng]).addTo(markerClusterGroup).bindPopup(row.raw.join(', '));
+      });
+      map.fitBounds(markerClusterGroup.getBounds());
+
+      const displayCols = columns.slice(0, 3);
+      document.getElementById('tableHead').innerHTML = `<tr>${displayCols.map(c => `<th>${c}</th>`).join('')}</tr>`;
+      document.getElementById('tableBody').innerHTML = allData.map(row => 
+        `<tr>${displayCols.map((c, i) => `<td>${row.raw[i] || ''}</td>`).join('')}</tr>`
+      ).join('');
+    }
+
+    fileInput.onchange = (e) => {
+      const f = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (ev) => loadData(ev.target.result, f.name);
+      reader.readAsText(f);
+    };
+    pasteBtn.onclick = () => pasteArea.classList.toggle('visible');
+    submitPaste.onclick = () => loadData(pasteTextarea.value, "Pasted Data");
+    exampleBtn.onclick = () => loadData(EXAMPLE_DATA, "Sample Data");
   </script>
 </body>
 </html>
