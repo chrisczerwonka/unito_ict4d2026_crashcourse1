@@ -12,7 +12,7 @@
     <style>
         :root {
             --primary: #0f172a;
-            --bg: #f1f5f9;
+            --bg: #f8fafc;
             --text: #0f172a;
             --text-muted: #475569;
             --border: #cbd5e1;
@@ -42,7 +42,7 @@
         }
 
         nav {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 0.75rem 2rem;
             display: flex;
@@ -79,60 +79,73 @@
         }
 
         header {
-            max-width: 1200px;
-            margin: 4rem auto 2rem;
+            max-width: 1400px;
+            margin: 4rem auto 3rem;
             padding: 0 2rem;
             text-align: center;
         }
 
         header h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            letter-spacing: -0.04em;
-            margin-bottom: 0.5rem;
+            font-size: 3rem;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            margin-bottom: 0.75rem;
+            color: var(--primary);
+        }
+
+        header p {
+            font-size: 1.125rem;
+            color: var(--text-muted);
+            max-width: 700px;
+            margin: 0 auto;
         }
 
         .dashboard {
-            max-width: 1200px;
-            margin: 0 auto 4rem;
+            max-width: 1400px;
+            margin: 0 auto 6rem;
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 2rem;
+            gap: 2.5rem;
             padding: 0 2rem;
         }
 
         .card {
             background: #fff;
-            padding: 2rem;
-            border-radius: 1rem;
+            padding: 2.5rem;
+            border-radius: 1.25rem;
             border: 1px solid var(--border);
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
             display: flex;
             flex-direction: column;
-            align-items: center;
         }
 
         .card h3 {
-            font-size: 1.125rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.1em;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 1rem;
         }
 
-        canvas { max-width: 100%; height: auto !important; }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+        }
 
         footer {
             text-align: center;
-            padding: 4rem 2rem;
+            padding: 6rem 2rem;
             color: var(--text-muted);
             font-size: 0.875rem;
             border-top: 1px solid var(--border);
             background: #fff;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
             .dashboard { grid-template-columns: 1fr; }
         }
     </style>
@@ -152,130 +165,196 @@
     </div>
 
     <header>
-        <h1>Global Flood Analytics</h1>
-        <p>Analyzing historical patterns from the Dartmouth Flood Observatory Archive</p>
+        <h1>Flood Archive Intelligence</h1>
+        <p>Advanced cross-sectional analysis of historical global flood events from the Dartmouth Flood Observatory archive (1985-2023).</p>
     </header>
 
     <div class="dashboard">
+        <!-- 1. Top 20 Countries -->
         <div class="card">
-            <h3>Flood Events Over Time (Last 10Y)</h3>
-            <canvas id="yearsChart"></canvas>
+            <h3>Flood Events by Country (Top 20)</h3>
+            <div class="chart-container">
+                <canvas id="countryChart"></canvas>
+            </div>
         </div>
+
+        <!-- 2. Events per Year -->
         <div class="card">
-            <h3>Main Causes of Flooding</h3>
-            <canvas id="causesChart"></canvas>
+            <h3>Flood Events per Year (Temporal Trend)</h3>
+            <div class="chart-container">
+                <canvas id="timelineChart"></canvas>
+            </div>
         </div>
+
+        <!-- 3. Events by Category -->
         <div class="card">
-            <h3>Severity Distribution</h3>
-            <canvas id="severityChart"></canvas>
+            <h3>Events by Categorised Reason</h3>
+            <div class="chart-container">
+                <canvas id="categoryChart"></canvas>
+            </div>
         </div>
+
+        <!-- 4. Total Displaced by Severity -->
         <div class="card">
-            <h3>Dead vs. Displaced (Severity 2+)</h3>
-            <canvas id="impactChart"></canvas>
+            <h3>Total Displaced by Severity Level</h3>
+            <div class="chart-container">
+                <canvas id="severityChart"></canvas>
+            </div>
         </div>
     </div>
 
     <footer>
-        <p>&copy; 2026 Unito-ICT4D Research. Data powered by DFO.</p>
+        <p>&copy; 2026 Unito-ICT4D Research Center. All Rights Reserved.</p>
+        <p style="font-size: 0.75rem; margin-top: 0.5rem; opacity: 0.6;">Bangladesh FloodKit Analytics Module v2.1</p>
     </footer>
 
     <script>
+        // High-end Color Palette
+        const PALETTE = [
+            '#0f172a', '#334155', '#475569', '#64748b', '#94a3b8',
+            '#0d9488', '#14b8a6', '#2dd4bf', '#5eead4', '#99f6e4',
+            '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe',
+            '#e11d48', '#f43f5e', '#fb7185', '#fda4af', '#fecdd3'
+        ];
+
         Papa.parse('../../data/floodarchive_cleaned.csv', {
             download: true,
             header: true,
             complete: function(results) {
-                const data = results.data;
-                createCharts(data);
+                const data = results.data.filter(row => row.ID); // Filter empty rows
+                renderAnalytics(data);
             }
         });
 
-        function createCharts(data) {
+        function renderAnalytics(data) {
+            // CHART 1: Top 20 Countries
+            const countryCounts = {};
+            data.forEach(row => {
+                const c = row.Country ? row.Country.trim() : 'Unknown';
+                countryCounts[c] = (countryCounts[c] || 0) + 1;
+            });
+            const topCountries = Object.entries(countryCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 20);
+
+            new Chart(document.getElementById('countryChart'), {
+                type: 'bar',
+                data: {
+                    labels: topCountries.map(c => c[0]),
+                    datasets: [{
+                        label: 'Total Events',
+                        data: topCountries.map(c => c[1]),
+                        backgroundColor: PALETTE,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { grid: { display: false } }, y: { grid: { display: false } } }
+                }
+            });
+
+            // CHART 2: Events per Year
             const yearCounts = {};
             data.forEach(row => {
                 const year = row.Year;
-                if (year >= 2013 && year <= 2023) {
-                    yearCounts[year] = (yearCounts[year] || 0) + 1;
-                }
+                if (year) yearCounts[year] = (yearCounts[year] || 0) + 1;
             });
             const sortedYears = Object.keys(yearCounts).sort();
 
-            new Chart(document.getElementById('yearsChart'), {
+            new Chart(document.getElementById('timelineChart'), {
                 type: 'line',
                 data: {
                     labels: sortedYears,
                     datasets: [{
-                        label: 'Number of Events',
+                        label: 'Annual Events',
                         data: sortedYears.map(y => yearCounts[y]),
                         borderColor: '#0f172a',
-                        backgroundColor: 'rgba(15, 23, 42, 0.1)',
+                        backgroundColor: 'rgba(15, 23, 42, 0.05)',
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#0f172a',
                         fill: true,
-                        tension: 0.4
+                        tension: 0.3
                     }]
                 },
-                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-            });
-
-            const causeCounts = {};
-            data.forEach(row => {
-                const cause = row.categorised_reason || 'Unknown';
-                causeCounts[cause] = (causeCounts[cause] || 0) + 1;
-            });
-            const topCauses = Object.entries(causeCounts)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 5);
-
-            new Chart(document.getElementById('causesChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: topCauses.map(c => c[0]),
-                    datasets: [{
-                        data: topCauses.map(c => c[1]),
-                        backgroundColor: ['#0f172a', '#334155', '#475569', '#64748b', '#94a3b8']
-                    }]
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    }
                 }
             });
 
-            const severityCounts = { '1': 0, '1.5': 0, '2': 0 };
+            // CHART 3: Events by Category
+            const categoryCounts = {};
             data.forEach(row => {
-                const sev = row.Severity;
-                if (severityCounts[sev] !== undefined) severityCounts[sev]++;
+                const cat = row.categorised_reason ? row.categorised_reason.trim() : 'Other';
+                categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
             });
+            const sortedCats = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]);
+
+            new Chart(document.getElementById('categoryChart'), {
+                type: 'bar',
+                data: {
+                    labels: sortedCats.map(c => c[0]),
+                    datasets: [{
+                        label: 'Events',
+                        data: sortedCats.map(c => c[1]),
+                        backgroundColor: PALETTE.slice(5, 15),
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { grid: { display: false } }, y: { beginAtZero: true } }
+                }
+            });
+
+            // CHART 4: Total Displaced by Severity
+            const severityDisplaced = {};
+            data.forEach(row => {
+                const sev = row.Severity || 'Unknown';
+                const disp = parseInt(row.Displaced) || 0;
+                severityDisplaced[sev] = (severityDisplaced[sev] || 0) + disp;
+            });
+            const sortedSev = Object.keys(severityDisplaced).sort((a, b) => parseFloat(a) - parseFloat(b));
 
             new Chart(document.getElementById('severityChart'), {
                 type: 'bar',
                 data: {
-                    labels: ['Low (1)', 'Medium (1.5)', 'High (2)'],
+                    labels: sortedSev.map(s => `Level ${s}`),
                     datasets: [{
-                        label: 'Count',
-                        data: Object.values(severityCounts),
-                        backgroundColor: '#0f172a'
-                    }]
-                },
-                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-            });
-
-            const impactData = data
-                .filter(row => parseFloat(row.Severity) >= 2)
-                .slice(0, 100)
-                .map(row => ({
-                    x: parseInt(row.Dead) || 0,
-                    y: parseInt(row.Displaced) || 0
-                }))
-                .filter(p => p.x > 0 && p.y > 0);
-
-            new Chart(document.getElementById('impactChart'), {
-                type: 'scatter',
-                data: {
-                    datasets: [{
-                        label: 'Events',
-                        data: impactData,
-                        backgroundColor: 'rgba(225, 29, 72, 0.6)'
+                        label: 'Total Displaced',
+                        data: sortedSev.map(s => severityDisplaced[s]),
+                        backgroundColor: '#e11d48',
+                        borderRadius: 8
                     }]
                 },
                 options: {
-                    scales: {
-                        x: { title: { display: true, text: 'Deaths' }, type: 'logarithmic' },
-                        y: { title: { display: true, text: 'Displaced' }, type: 'logarithmic' }
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `Displaced: ${ctx.raw.toLocaleString()}`
+                            }
+                        }
+                    },
+                    scales: { 
+                        x: { grid: { display: false } }, 
+                        y: { 
+                            beginAtZero: true,
+                            ticks: {
+                                callback: (val) => val.toLocaleString()
+                            }
+                        } 
                     }
                 }
             });
