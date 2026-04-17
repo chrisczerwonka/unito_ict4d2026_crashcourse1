@@ -59,4 +59,4 @@ def convert_excel_to_geojson(excel_file, geojson_file):
         json.dump(geojson_data, f, indent=2)
 
 if __name__ == "__main__":
-    convert_excel_to_geojson('flood_data.xlsx', 'flood_data.geojson')
+    convert_excel_to_geojson('../data/flood_data.xlsx', '../data/flood_data.geojson')

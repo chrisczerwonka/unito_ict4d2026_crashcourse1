@@ -1,0 +1,270 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.9978,
+          21.4353
+        ]
+      },
+      "properties": {
+        "Name": "Cox's Bazar Cable Landing Station (SMW4)",
+        "Type": "Cable Landing Station",
+        "Operator": "BSCCL",
+        "Source": "Submarine Cable Map"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.1456,
+          21.8518
+        ]
+      },
+      "properties": {
+        "Name": "Kuakata Cable Landing Station (SMW5)",
+        "Type": "Cable Landing Station",
+        "Operator": "BSCCL",
+        "Source": "Submarine Cable Map"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.384,
+          23.751
+        ]
+      },
+      "properties": {
+        "Name": "NOVO NIX",
+        "Type": "Internet Exchange Point (IXP)",
+        "Operator": "NOVOCOM NIX",
+        "City": "Dhaka",
+        "Source": "PeeringDB"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.384,
+          23.751
+        ]
+      },
+      "properties": {
+        "Name": "BDIX",
+        "Type": "Internet Exchange Point (IXP)",
+        "Operator": "Bangladesh Internet Exchange Trust",
+        "City": "Dhaka",
+        "Source": "PeeringDB"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.384,
+          23.751
+        ]
+      },
+      "properties": {
+        "Name": "NIX-BD",
+        "Type": "Internet Exchange Point (IXP)",
+        "Operator": "Neutral Internet Exchange Bangladesh",
+        "City": "Noakhali",
+        "Source": "PeeringDB"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.384,
+          23.751
+        ]
+      },
+      "properties": {
+        "Name": "AIX-BD",
+        "Type": "Internet Exchange Point (IXP)",
+        "Operator": "aamra NIX",
+        "City": "Dhaka",
+        "Source": "PeeringDB"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.384,
+          23.751
+        ]
+      },
+      "properties": {
+        "Name": "SUMMIT NIX",
+        "Type": "Internet Exchange Point (IXP)",
+        "Operator": "Summit Communications National Internet Exchange",
+        "City": "Dhaka",
+        "Source": "PeeringDB"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.384,
+          23.751
+        ]
+      },
+      "properties": {
+        "Name": "KTL-IX",
+        "Type": "Internet Exchange Point (IXP)",
+        "Operator": "Kloud Technologies National Internet Exchange [ ASN134508 ]",
+        "City": "Dhaka",
+        "Source": "PeeringDB"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.384,
+          23.751
+        ]
+      },
+      "properties": {
+        "Name": "BTCL IX",
+        "Type": "Internet Exchange Point (IXP)",
+        "Operator": "Bangladesh Telecommunications Company Limited (BTCL) IX",
+        "City": "Dhaka",
+        "Source": "PeeringDB"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.384,
+          23.751
+        ]
+      },
+      "properties": {
+        "Name": "ISPAB-NIX",
+        "Type": "Internet Exchange Point (IXP)",
+        "Operator": "Bangladesh Internet Service Provider Internet Exchange Trust",
+        "City": "Dhaka",
+        "Source": "PeeringDB"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.384,
+          23.751
+        ]
+      },
+      "properties": {
+        "Name": "BSCIX",
+        "Type": "Internet Exchange Point (IXP)",
+        "Operator": "",
+        "City": "Dhaka",
+        "Source": "PeeringDB"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.4045,
+          23.79411
+        ]
+      },
+      "properties": {
+        "Name": "A.R. Tower (EDOTCO)",
+        "Type": "Mobile Tower (IBS)",
+        "City": "Dhaka",
+        "Source": "EDOTCO Public Sample"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.40477,
+          23.79333
+        ]
+      },
+      "properties": {
+        "Name": "BTA Tower (EDOTCO)",
+        "Type": "Mobile Tower (IBS)",
+        "City": "Dhaka",
+        "Source": "EDOTCO Public Sample"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.40375,
+          23.79377
+        ]
+      },
+      "properties": {
+        "Name": "Hamlet Tower (EDOTCO)",
+        "Type": "Mobile Tower (IBS)",
+        "City": "Dhaka",
+        "Source": "EDOTCO Public Sample"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.40333,
+          23.79358
+        ]
+      },
+      "properties": {
+        "Name": "Iqbal Center (EDOTCO)",
+        "Type": "Mobile Tower (IBS)",
+        "City": "Dhaka",
+        "Source": "EDOTCO Public Sample"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.3535,
+          22.701
+        ]
+      },
+      "properties": {
+        "Name": "Barisal City Center (EDOTCO)",
+        "Type": "Mobile Tower (GF)",
+        "City": "Barisal",
+        "Source": "EDOTCO Public Sample"
+      }
+    }
+  ]
+}
